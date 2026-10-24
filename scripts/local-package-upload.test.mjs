@@ -1,21 +1,26 @@
 import assert from 'node:assert/strict'
+import { execFile } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { create } from 'tar'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+import { gzipSync } from 'node:zlib'
+import { create, Header } from 'tar'
 
 import {
   getLocalPackageOperation,
   LocalPackageUploadStore,
 } from '../src/node/local-upload.ts'
 
-async function createPackageArchive(root, manifest) {
+async function createPackageArchive(root, manifest, payload = 'module.exports = {}\n') {
   const source = join(root, 'source')
   const packageRoot = join(source, 'package')
   await mkdir(packageRoot, { recursive: true })
   await writeFile(join(packageRoot, 'package.json'), JSON.stringify(manifest, null, 2))
-  await writeFile(join(packageRoot, 'index.js'), 'module.exports = {}\n')
+  await writeFile(join(packageRoot, 'index.js'), payload)
   const archive = join(root, 'plugin.tgz')
   await create({ cwd: source, file: archive, gzip: true }, ['package'])
   return archive
@@ -94,6 +99,47 @@ test('serializes concurrent chunks and finish for the same upload', async () => 
   }
 })
 
+test('uploads large archives in 32 KiB chunks below a 48 KiB Console message ceiling', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'market-next-local-upload-chunks-'))
+  const store = new LocalPackageUploadStore(root, () => {})
+  try {
+    const archive = await createPackageArchive(root, {
+      name: 'koishi-plugin-upload-chunks', version: '1.0.0', main: 'index.js',
+    }, randomBytes(128 * 1024 + 7))
+    const content = await readFile(archive)
+    assert.ok(content.length > 100 * 1024)
+    const started = await store.start({ filename: 'plugin.tgz', size: content.length })
+    assert.equal(started.chunkSize, 32 * 1024)
+    assert.equal(started.maxSize, 64 * 1024 * 1024)
+    await assert.rejects(store.append({
+      uploadId: started.uploadId, index: 0,
+      data: content.subarray(0, started.chunkSize + 1).toString('base64'),
+    }), /分块大小无效/)
+
+    let index = 0
+    for (let offset = 0; offset < content.length; offset += started.chunkSize) {
+      const end = Math.min(content.length, offset + started.chunkSize)
+      const request = {
+        uploadId: started.uploadId, index: index++,
+        data: content.subarray(offset, end).toString('base64'),
+      }
+      const message = JSON.stringify({
+        id: '1234567', type: 'market/local-package-upload-chunk', args: [request],
+      })
+      assert.ok(Buffer.byteLength(message) < 48 * 1024)
+      assert.deepEqual(await store.append(request), { received: end, size: content.length })
+    }
+    assert.ok(index > 1)
+    const preview = await store.finish({ uploadId: started.uploadId })
+    assert.equal(preview.manifest.name, 'koishi-plugin-upload-chunks')
+    const committed = await store.commit(started.uploadId)
+    assert.deepEqual(await readFile(join(root, '.yarn', 'local', committed.filename)), content)
+  } finally {
+    await store.dispose()
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('rejects archives that are not Koishi plugins', async () => {
   const root = await mkdtemp(join(tmpdir(), 'market-next-local-upload-invalid-'))
   const store = new LocalPackageUploadStore(root, () => {})
@@ -113,6 +159,91 @@ test('rejects archives that are not Koishi plugins', async () => {
     await rm(root, { recursive: true, force: true })
   }
 })
+
+function archiveEntry(path, content, fields = {}) {
+  const data = Buffer.isBuffer(content) ? content : Buffer.from(content)
+  const header = new Header({ path, type: 'File', mode: 0o644, size: data.length, ...fields })
+  header.encode()
+  return Buffer.concat([header.block, data, Buffer.alloc((512 - data.length % 512) % 512)])
+}
+
+const manifestEntry = archiveEntry('package/package.json', JSON.stringify({
+  name: 'koishi-plugin-archive-validation', version: '1.0.0',
+}))
+const payloadEntry = archiveEntry('package/index.js', randomBytes(128 * 1024))
+const validEntries = [manifestEntry, payloadEntry]
+const invalidArchives = [
+  ['unsafe paths', [...validEntries, archiveEntry('../outside.txt', 'x')], '非法路径'],
+  ['symbolic links', [...validEntries, archiveEntry('package/link', '', {
+    type: 'SymbolicLink', linkpath: 'index.js',
+  })], '不允许的条目类型'],
+  ['duplicate manifests', [...validEntries, manifestEntry], '重复的 package.json'],
+  ['empty manifests', [payloadEntry, archiveEntry('package/package.json', '')], 'package.json 大小无效'],
+  ['oversized manifests', [payloadEntry, archiveEntry('package/package.json', ' '.repeat(1024 * 1024 + 1))], 'package.json 大小无效'],
+  ['too many entries', [...validEntries, ...Array.from({ length: 8191 }, (_, i) => archiveEntry(`package/asset-${i}`, ''))], '文件数量过多'],
+  ['excessive expanded size', [...validEntries, archiveEntry('package/huge.bin', '', {
+    size: 256 * 1024 * 1024 + 1,
+  })], '解压后内容过大'],
+  ['missing manifests', [payloadEntry], '缺少 package/package.json'],
+  ['invalid manifest JSON', [payloadEntry, archiveEntry('package/package.json', '{')], '不是有效的 JSON'],
+].map(([label, entries, pattern]) => [label, gzipSync(Buffer.concat([...entries, Buffer.alloc(1024)])), pattern])
+invalidArchives.push(
+  ['corrupt archives', randomBytes(128 * 1024), '无法读取本地插件归档'],
+  ['truncated gzip', gzipSync(Buffer.concat([...validEntries, Buffer.alloc(1024)])).subarray(0, 1024), '无法读取本地插件归档'],
+)
+
+// Isolate these regressions: an exception escaping the parser must fail the test, not kill its runner.
+const archiveValidationWorker = `
+  import assert from 'node:assert/strict'
+  import { readFile, readdir } from 'node:fs/promises'
+  import { join } from 'node:path'
+  import { LocalPackageUploadStore } from './src/node/local-upload.ts'
+
+  const [root, pattern] = process.argv.slice(1)
+  const warnings = []
+  const store = new LocalPackageUploadStore(root, message => warnings.push(message))
+  async function upload(filename) {
+    const content = await readFile(join(root, filename))
+    const started = await store.start({ filename, size: content.length })
+    let index = 0
+    for (let offset = 0; offset < content.length; offset += started.chunkSize) {
+      await store.append({
+        uploadId: started.uploadId, index: index++,
+        data: content.subarray(offset, offset + started.chunkSize).toString('base64'),
+      })
+    }
+    return started.uploadId
+  }
+  try {
+    const uploadId = await upload('invalid.tgz')
+    await assert.rejects(store.finish({ uploadId }), new RegExp(pattern))
+    assert.equal(await store.cancel(uploadId), false)
+    await store.pruneExpired()
+    assert.deepEqual(await readdir(join(root, '.yarn', 'local', '.market-next-upload')), [])
+    const nextId = await upload('valid.tgz')
+    const preview = await store.finish({ uploadId: nextId })
+    assert.equal(preview.manifest.name, 'koishi-plugin-archive-validation')
+    assert.equal(await store.cancel(nextId), true)
+    assert.deepEqual(warnings, [])
+  } finally {
+    await store.dispose()
+  }
+`
+
+for (const [label, archive, pattern] of invalidArchives) {
+  test(`rejects ${label} without crashing or blocking upload cleanup`, { timeout: 15000 }, async () => {
+    const root = await mkdtemp(join(tmpdir(), 'market-next-archive-validation-'))
+    try {
+      await writeFile(join(root, 'invalid.tgz'), archive)
+      await writeFile(join(root, 'valid.tgz'), gzipSync(Buffer.concat([...validEntries, Buffer.alloc(1024)])))
+      await promisify(execFile)(process.execPath, [
+        '--import', 'tsx', '--input-type=module', '-e', archiveValidationWorker, root, pattern,
+      ], { cwd: fileURLToPath(new URL('..', import.meta.url)), timeout: 10000 })
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}
 
 test('classifies same-name local package changes as version operations', () => {
   assert.equal(getLocalPackageOperation(undefined, undefined, '1.0.0'), 'install')

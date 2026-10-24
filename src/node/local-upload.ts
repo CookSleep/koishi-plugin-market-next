@@ -1,17 +1,18 @@
 import { createHash, randomUUID } from 'crypto'
 import { FileHandle, open } from 'fs/promises'
 import { basename, dirname, relative, resolve } from 'path'
-import { promises as fsp } from 'fs'
+import { createReadStream, promises as fsp } from 'fs'
 import Scanner, { PackageJson } from '@koishijs/registry'
 import { compare, valid } from 'semver'
-import { list } from 'tar'
+import { Parser } from 'tar'
 import {
   createHashedLocalBindingFilename,
   createLocalBindingRequest,
   MAX_LOCAL_BINDING_PACK_SIZE,
 } from './local-binding'
 
-const LOCAL_UPLOAD_CHUNK_SIZE = 512 * 1024
+// Base64 plus the Console envelope stays below a 48 KiB message ceiling.
+const LOCAL_UPLOAD_CHUNK_SIZE = 32 * 1024
 const LOCAL_UPLOAD_TTL = 15 * 60 * 1000
 const MAX_ARCHIVE_ENTRIES = 8192
 const MAX_ARCHIVE_EXPANDED_SIZE = 256 * 1024 * 1024
@@ -309,27 +310,53 @@ async function inspectPackageArchive(path: string): Promise<PackageJson> {
   const chunks: Buffer[] = []
 
   try {
-    await list({
-      file: path,
-      strict: true,
-      maxReadSize: 1024 * 1024,
-      maxMetaEntrySize: 1024 * 1024,
-      maxDecompressionRatio: 200,
-      onReadEntry(entry) {
-        entryCount++
-        expandedSize += Number(entry.size) || 0
-        if (entryCount > MAX_ARCHIVE_ENTRIES || expandedSize > MAX_ARCHIVE_EXPANDED_SIZE) {
-          throw new Error('本地插件归档解压后内容过大或文件数量过多。')
+    await new Promise<void>((resolve, reject) => {
+      const input = createReadStream(path, { highWaterMark: 1024 * 1024 })
+      let settled = false
+      const parser = new Parser({
+        strict: true,
+        maxMetaEntrySize: 1024 * 1024,
+        maxDecompressionRatio: 200,
+        onReadEntry(entry) {
+          try {
+            entryCount++
+            expandedSize += Number(entry.size) || 0
+            if (entryCount > MAX_ARCHIVE_ENTRIES || expandedSize > MAX_ARCHIVE_EXPANDED_SIZE) {
+              throw new Error('本地插件归档解压后内容过大或文件数量过多。')
+            }
+            validateArchiveEntry(entry.path, entry.type)
+            if (entry.path.replace(/\\/g, '/') !== 'package/package.json') return
+            if (manifestFound) throw new Error('本地插件归档包含重复的 package.json。')
+            if (entry.size <= 0 || entry.size > MAX_PACKAGE_MANIFEST_SIZE) {
+              throw new Error('本地插件 package.json 大小无效。')
+            }
+            manifestFound = true
+            entry.on('data', chunk => chunks.push(Buffer.from(chunk)))
+          } catch (error) {
+            // Entry callbacks run outside the awaiting call's try/catch.
+            parser.abort(error instanceof Error ? error : new Error(String(error)))
+          } finally {
+            entry.resume()
+          }
+        },
+      })
+      const complete = (error?: Error) => {
+        if (settled) return
+        settled = true
+        input.unpipe(parser)
+        const onClose = () => error ? reject(error) : resolve()
+        if (input.closed) {
+          onClose()
+        } else {
+          input.once('close', onClose)
+          input.destroy()
         }
-        validateArchiveEntry(entry.path, entry.type)
-        if (entry.path.replace(/\\/g, '/') !== 'package/package.json') return
-        if (manifestFound) throw new Error('本地插件归档包含重复的 package.json。')
-        if (entry.size <= 0 || entry.size > MAX_PACKAGE_MANIFEST_SIZE) {
-          throw new Error('本地插件 package.json 大小无效。')
-        }
-        manifestFound = true
-        entry.on('data', chunk => chunks.push(Buffer.from(chunk)))
-      },
+        if (error) parser.abort(error)
+      }
+      parser.on('error', complete)
+      parser.once('end', () => complete())
+      input.on('error', complete)
+      input.pipe(parser)
     })
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
