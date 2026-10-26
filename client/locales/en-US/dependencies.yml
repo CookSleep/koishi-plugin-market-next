@@ -3,6 +3,7 @@ toolbar:
   layout: Layout
   gridView: Card view
   listView: List view
+  loading: Fetching version info…
   searchPlaceholder: Search dependencies
 empty: No matching dependencies.
 apply:

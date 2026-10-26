@@ -499,6 +499,12 @@ function getResultText(peer: PeerInfo, name: string) {
       white-space: nowrap;
     }
 
+    // Long peer names wrap so the table never pushes the dialog sideways.
+    td:first-child {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
     thead th {
       border-top: 0;
       color: var(--fg3);
@@ -572,6 +578,12 @@ function getResultText(peer: PeerInfo, name: string) {
 @media (max-width: 768px) {
   .install-panel .el-dialog__header .el-select {
     max-width: none;
+  }
+
+  .install-panel table td,
+  .install-panel table th {
+    padding: 0.5rem;
+    white-space: normal;
   }
 }
 

@@ -77,8 +77,8 @@
 
   <el-dialog
     v-model="showIgnoreDialog"
-    :class="['market-dialog', modeClass]"
-    width="min(520px, calc(100vw - 32px))"
+    class="market-dialog"
+    width="520px"
     append-to-body
     destroy-on-close
     :title="t('dependencyCard.ignore.title')"
@@ -121,8 +121,8 @@
 
   <el-dialog
     v-model="showLocalBindingDialog"
-    :class="['market-dialog', modeClass]"
-    width="min(520px, calc(100vw - 32px))"
+    class="market-dialog"
+    width="520px"
     append-to-body
     destroy-on-close
     :title="t('dependencyCard.localBinding.title')"
@@ -527,7 +527,7 @@ async function confirmIgnoreUpdate() {
 
 async function restoreUpdate() {
   const policy = getWritableMarketNextPolicy(config.value)
-  if (policy.updateIgnored) delete policy.updateIgnored[props.name]
+  delete policy.updateIgnored?.[props.name]
   policy.updateIgnoredPackages = (policy.updateIgnoredPackages ?? '')
     .split(/[\s,，;；]+/g)
     .filter(item => item && item.toLowerCase() !== props.name.toLowerCase())

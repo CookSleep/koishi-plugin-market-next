@@ -48,6 +48,10 @@ export type MarketStore = typeof store & {
   registryStatus?: Dict<RegistryStatus>
 }
 
+export function isRegistryRefreshing() {
+  return Object.values((store as MarketStore).registryStatus ?? {}).some(status => status.loading)
+}
+
 export const REGISTRY_STATUS_SWEEP_INTERVAL = 15_000
 const REGISTRY_STATUS_TIMEOUT = 120_000
 

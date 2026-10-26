@@ -21,6 +21,7 @@
       <el-checkbox :model-value="prereleaseBlocked" @change="togglePrereleaseFilter">
         {{ t('dependencies.toolbar.blockPreview') }}
       </el-checkbox>
+      <span v-if="isRegistryRefreshing()" class="deps-loading">{{ t('dependencies.toolbar.loading') }}</span>
       <div class="deps-layout-switch" role="group" :aria-label="t('dependencies.toolbar.layout')">
         <button
           v-for="mode in (['grid', 'list'] as const)"
@@ -100,6 +101,7 @@ import PackageView from './package.vue'
 import { PLUGIN_PACKAGE_RE } from '../../src/shared/bundle'
 import { shouldIncludeDiscoveredLocalPlugin } from '../../src/shared/dependency-source'
 import { loadMarketObjects } from '../market/state'
+import { isRegistryRefreshing } from '../registry-state'
 
 type FilterKey = 'all' | 'pending' | 'bundle' | 'unconfigured' | 'updatable' | 'ignored' | 'check-disabled' | 'invalid' | 'error' | 'local' | 'manual'
 type ItemKind = 'pending' | 'bundle' | 'unconfigured' | 'updatable' | 'ignored' | 'check-disabled' | 'invalid' | 'error' | 'local' | 'manual' | 'installed'
@@ -226,6 +228,7 @@ const items = computed<DependencyItem[]>(() => {
 })
 
 const updates = computed(() => items.value.filter(item => item.kind === 'updatable').map(item => item.name))
+
 
 const prereleaseBlocked = computed(() => !!getMarketNextPolicy(config.value).updateIgnorePrerelease)
 
@@ -388,6 +391,11 @@ ctx.action('dependencies.upgrade', {
 
 .deps-filter-select {
   flex: 0 0 10rem;
+}
+
+.deps-loading {
+  color: var(--fg3);
+  font-size: 0.875rem;
 }
 
 .deps-layout-switch {

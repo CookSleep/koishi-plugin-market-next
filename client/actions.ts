@@ -4,9 +4,9 @@ import { getPendingOverrides, patchMarketNextData } from './utils'
 import { translate } from './i18n'
 import { showConfirm, showEnvironmentVersions, showInstallHistory, showManual } from './components/utils'
 import {
+  isRegistryRefreshing,
   REGISTRY_STATUS_SWEEP_INTERVAL,
   sweepRegistryStatus,
-  type MarketStore,
 } from './registry-state'
 
 const APRIL_FOOLS_SHORTCUT_TIMEOUT = 1_500
@@ -144,11 +144,6 @@ export function setupActions(ctx: Context) {
     type: () => refreshingMarket.value || !store.market || store.market.refreshing || store.market.progress < store.market.total ? 'spin disabled' : '',
   }])
 
-  const registryRefreshing = () => {
-    const target = store as MarketStore
-    return Object.values(target.registryStatus ?? {}).some(status => status.loading)
-  }
-
   ctx.menu('dependencies', [{
     id: '.upgrade',
     icon: () => {
@@ -177,7 +172,7 @@ export function setupActions(ctx: Context) {
     id: 'market.refresh',
     icon: 'refresh',
     label: () => translate('common.actions.refresh'),
-    type: () => refreshingDependencies.value || registryRefreshing() ? 'spin disabled' : '',
+    type: () => refreshingDependencies.value || isRegistryRefreshing() ? 'spin disabled' : '',
   }])
 
   ctx.effect(() => {
