@@ -1,9 +1,5 @@
 label: 插件包
 loading: 正在读取插件包清单……
-stats:
-  selected: 已选 / {count} 成员
-  presets: 将应用预设
-  moved: 将移动配置
 bulk:
   label: 批量操作：
   createAll: 创建所有配置
@@ -16,7 +12,6 @@ bulk:
 members:
   required: 核心成员
   optional: 可选成员
-  requiredPill: 必装
   optionalToggleAll: 全部选中
   optionalToggleNone: 全部取消
   createConfig: 创建配置
@@ -55,7 +50,7 @@ diff:
   title: 即将执行
   install: 安装依赖
   config: 创建配置
-  preset: 预设
+  withPreset: '{name}（使用预设）'
   move: 移动配置
   skip: 跳过配置
 actions:

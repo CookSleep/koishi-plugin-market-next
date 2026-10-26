@@ -1,9 +1,5 @@
 label: Plugin bundle
 loading: Reading plugin bundle manifest…
-stats:
-  selected: '{count} of {total} members selected'
-  presets: Presets to apply
-  moved: Configs to move
 bulk:
   label: 'Batch operations:'
   createAll: Create all configs
@@ -16,7 +12,6 @@ bulk:
 members:
   required: Required members
   optional: Optional members
-  requiredPill: Required
   optionalToggleAll: Select all
   optionalToggleNone: Deselect all
   createConfig: Create config
@@ -55,7 +50,7 @@ diff:
   title: About to execute
   install: Install dependencies
   config: Create configs
-  preset: Preset
+  withPreset: '{name} (with preset)'
   move: Move configs
   skip: Skip configs
 actions:

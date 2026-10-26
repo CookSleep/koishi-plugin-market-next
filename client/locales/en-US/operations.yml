@@ -1,12 +1,9 @@
 confirm:
-  title: Confirm dependency changes
-  dependency: Dependency
-  oldVersion: Previous version
-  newVersion: New version
+  title: Apply Dependency Changes
+  intro: These {count} change(s) will be written to package.json and installed by the package manager. Keep this page open while it runs.
   notInstalled: Not installed
-  removeDependency: Remove dependency
-  removeConfig: Remove plugin config for uninstalled plugins
-  discard: Discard changes
+  removeDependency: Uninstall
+  removeConfig: Also remove the config of uninstalled plugins
   apply: Apply changes
   saveBundleFailed: Failed to save plugin bundle ownership. Refresh and check again.
 install:
@@ -48,10 +45,10 @@ install:
   uninstallTimeout: Uninstall timed out!
 manual:
   title: Add dependency
-  localTab: Local build
-  registryTab: npm package
-  dropTitle: Drop a local plugin archive here
-  dropHint: Or select a .tgz file created by npm pack
+  localTab: Upload a local package
+  registryTab: Add from npm
+  dropTitle: Drop a .tgz file here
+  dropHint: Or click to choose a file packed with npm pack
   dropLimit: 'Maximum file size: 64 MiB'
   uploading: Uploading and validating the local plugin…
   uploadFailed: Failed to upload the local plugin. Try again.
@@ -74,16 +71,16 @@ manual:
     upgrade: Update to {version}
     downgrade: Roll back to {version}
     replace: Replace current build
-  hint: 'Tip: to install a plugin, open the '
+  hint: 'To install a plugin, searching in the '
   market: plugin market
-  hintAfter: .
-  placeholder: Enter a package name
+  hintAfter: ' is easier. Use this to add npm packages that are not listed there.'
+  placeholder: npm package name, e.g. koishi-plugin-example
   registryLoading: Looking up package metadata…
   registryLookupFailed: Package metadata could not be loaded. Check the package name and network connection.
   latest: Latest version
   description: Description
   cancel: Cancel
-  confirm: Confirm
+  confirm: Add
 progress:
   logTitle: Installation log / Package Manager Output
   initializing: Initializing the installation process and attaching output…
@@ -133,25 +130,17 @@ progress:
   fallbackFailed: 'Fallback npm source retry failed. Package manager exit code: {code}'
 history:
   title: Recent operations
-  syncing: Synchronizing records…
-  count: '{count} record(s)'
   refresh: Refresh
-  records: Operation records
   reading: Reading operation records…
-  empty: No dependency operation records
+  empty: No operations yet. Installing, updating or uninstalling dependencies leaves a log here.
   readingLog: Reading log…
   copyLog: Copy log
   copied: Log copied.
   copyFailed: Copy failed. Select the log text manually.
   close: Close
-  dependencyCount: Dependencies
   source: Install source
   logSize: Log size
-  unknown: Unknown
-  versionChanges: Version changes
-  items: '{count} item(s)'
   truncated: The log is large; copied content keeps only the beginning and end.
-  selectRecord: Select a record to view its log
   loadFailed: Failed to read recent operations. Check the backend log.
   detailFailed: Failed to read the log detail. The file may have been cleaned up.
   statusRunning: Running
@@ -159,10 +148,10 @@ history:
   statusError: Failed
   statusUnknown: Unknown status
   operation: Dependency operation
-  install: Install {count}
-  update: Update {count}
-  uninstall: Uninstall {count}
-  changed: Change {count} dependencies
+  install: Installed {count} dependency(ies)
+  update: Updated {count} dependency(ies)
+  uninstall: Uninstalled {count} dependency(ies)
+  changed: Changed {count} dependencies
   notInstalled: Not installed
   uninstalled: Uninstalled
   unknownTime: Unknown time
@@ -172,13 +161,13 @@ timeline:
   current: Current version
   currentBadge: Current
   loading: Reading version history…
-  empty: No version change records are available
+  empty: This dependency has not been installed or updated through Market Next yet.
   loadFailed: Failed to read version history. Try again later.
   from: Changed from {version}
   useVersion: Set as target version
-  added: '{version} was added to pending changes'
+  added: '{version} was added to the pending changes.'
   close: Close
   uninstalled: Uninstalled
   unknownVersion: Unknown
   unknownTime: Unknown time
-  note: Selecting a version adds it to pending changes. Confirm it from the bottom of the Dependencies page.
+  note: Pick a record and click “Set as target version” to add that version to the pending changes.

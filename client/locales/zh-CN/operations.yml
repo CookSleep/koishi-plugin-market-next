@@ -1,12 +1,9 @@
 confirm:
-  title: 确认依赖更改
-  dependency: 依赖
-  oldVersion: 旧版本
-  newVersion: 新版本
+  title: 应用依赖更改
+  intro: 下面 {count} 项改动会写入 package.json，然后由包管理器安装。安装期间请不要关闭页面。
   notInstalled: 未安装
-  removeDependency: 移除依赖
-  removeConfig: 为卸载的插件删除配置
-  discard: 丢弃改动
+  removeDependency: 卸载
+  removeConfig: 同时删除被卸载插件的配置
   apply: 应用更改
   saveBundleFailed: 插件包归属记录保存失败，请刷新后确认。
 install:
@@ -48,10 +45,10 @@ install:
   uninstallTimeout: 卸载超时！
 manual:
   title: 添加依赖
-  localTab: 本地构建
-  registryTab: npm 包名
-  dropTitle: 拖拽到此处上传
-  dropHint: 或点击选择由 npm pack 生成的 .tgz 文件
+  localTab: 上传本地包
+  registryTab: 从 npm 添加
+  dropTitle: 把 .tgz 文件拖到这里
+  dropHint: 或者点击选择用 npm pack 打包出的文件
   dropLimit: 单个文件最大 64 MiB
   uploading: 正在上传并校验本地插件……
   uploadFailed: 本地插件上传失败，请重试。
@@ -74,16 +71,16 @@ manual:
     upgrade: 更新到 {version}
     downgrade: 回退到 {version}
     replace: 替换当前构建
-  hint: 提示：如果你想要安装插件，请前往
+  hint: 想安装插件的话，去
   market: 插件市场
-  hintAfter: 页面。
-  placeholder: 请输入名称
+  hintAfter: 搜索会更方便。这里适合添加不在市场里的 npm 包。
+  placeholder: npm 包名，例如 koishi-plugin-example
   registryLoading: 正在查询包信息……
   registryLookupFailed: 无法获取包信息，请检查包名和网络连接。
   latest: 最新版本
   description: 介绍
   cancel: 取消
-  confirm: 确定
+  confirm: 添加
 progress:
   logTitle: 安装日志 / Package Manager Output
   initializing: 正在初始化安装进程并挂载输出……
@@ -133,25 +130,17 @@ progress:
   fallbackFailed: 备用 npm 源重试失败，包管理器退出码：{code}
 history:
   title: 最近操作
-  syncing: 正在同步记录……
-  count: 共 {count} 条记录
   refresh: 刷新
-  records: 操作记录
   reading: 正在读取操作记录……
-  empty: 暂无依赖操作记录
+  empty: 还没有操作记录。安装、更新或卸载依赖后，会在这里留下日志。
   readingLog: 正在读取日志……
   copyLog: 复制日志
   copied: 日志已复制。
   copyFailed: 复制失败，请手动选择日志文本。
   close: 关闭
-  dependencyCount: 依赖数量
   source: 安装源
   logSize: 日志大小
-  unknown: 未知
-  versionChanges: 版本变更
-  items: '{count} 项'
   truncated: 日志过大，复制内容仅保留开头与末尾。
-  selectRecord: 选择一条记录查看日志
   loadFailed: 读取最近操作失败，请检查后端日志。
   detailFailed: 读取日志详情失败，文件可能已被自动清理。
   statusRunning: 执行中
@@ -159,10 +148,10 @@ history:
   statusError: 失败
   statusUnknown: 状态未知
   operation: 依赖操作
-  install: 安装 {count}
-  update: 更新 {count}
-  uninstall: 卸载 {count}
-  changed: 变更 {count} 个依赖
+  install: 安装了 {count} 个依赖
+  update: 更新了 {count} 个依赖
+  uninstall: 卸载了 {count} 个依赖
+  changed: 改动了 {count} 个依赖
   notInstalled: 未安装
   uninstalled: 已卸载
   unknownTime: 时间未知
@@ -172,13 +161,13 @@ timeline:
   current: 当前版本
   currentBadge: 当前
   loading: 正在读取版本历史……
-  empty: 暂无可用的版本变更记录
+  empty: 还没有通过 Market Next 安装或更新过这个依赖。
   loadFailed: 读取版本历史失败，请稍后重试。
   from: 从 {version} 变更
   useVersion: 设为目标版本
-  added: 已将 {version} 加入待应用更改
+  added: 已把 {version} 加入待应用的改动。
   close: 关闭
   uninstalled: 已卸载
   unknownVersion: 未知
   unknownTime: 时间未知
-  note: 选择版本后会加入待应用更改，请在依赖管理页底部确认后执行。
+  note: 选中一条记录后点「设为目标版本」，该版本会加入待应用的改动。

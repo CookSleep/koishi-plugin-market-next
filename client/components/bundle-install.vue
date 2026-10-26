@@ -2,62 +2,27 @@
   <el-dialog
     :model-value="!!activeBundle"
     append-to-body
-    align-center
-    :class="['bundle-install-panel', modeClass]"
-    width="min(880px, calc(100vw - 24px))"
+    :class="['market-dialog', 'bundle-install-panel']"
+    width="800px"
     destroy-on-close
     @update:model-value="close"
   >
-    <template #header>
-      <div class="bundle-hero">
-        <div class="bundle-hero-icon">
-          <k-icon name="cube"></k-icon>
-        </div>
-        <div class="bundle-hero-text">
-          <div class="bundle-hero-title">
-            <span>{{ title }}</span>
-            <span class="bundle-badge">
-              <market-icon name="file-archive"></market-icon>
-              {{ t('bundle.label') }}
-            </span>
-          </div>
-          <div v-if="activeBundle" class="bundle-hero-meta">
-            <span>{{ activeBundle.package.name }}</span>
-            <span class="dot">·</span>
-            <span>{{ bundleVersion }}</span>
-          </div>
-        </div>
+    <template #header="{ titleId, titleClass }">
+      <div class="bundle-title">
+        <span :id="titleId" :class="titleClass">{{ title }}</span>
+        <span class="bundle-badge">{{ t('bundle.label') }}</span>
       </div>
+      <div v-if="activeBundle" class="bundle-meta">{{ activeBundle.package.name }} · {{ bundleVersion }}</div>
     </template>
 
     <template v-if="activeBundle">
-      <div v-if="loading" class="bundle-loading">
-        <span class="bundle-loading-spinner"></span>
-        {{ t('bundle.loading') }}
-      </div>
+      <div v-if="loading" class="bundle-state">{{ t('bundle.loading') }}</div>
       <k-comment v-else-if="error" type="danger">
         <p>{{ error }}</p>
       </k-comment>
 
       <template v-else-if="bundle">
         <p v-if="bundle.description" class="bundle-description">{{ bundle.description }}</p>
-
-        <!-- Stats row: visual progress + counts -->
-        <div class="bundle-stats">
-          <div class="bundle-stat">
-            <span class="bundle-stat-num">{{ selectedMembers.length }}</span>
-            <span class="bundle-stat-label">{{ t('bundle.stats.selected', { count: selectedMembers.length, total: members.length }) }}</span>
-            <div class="bundle-stat-bar"><div class="bundle-stat-fill" :style="{ width: progressPercent + '%' }"></div></div>
-          </div>
-          <div class="bundle-stat">
-            <span class="bundle-stat-num">{{ presetList.length }}</span>
-            <span class="bundle-stat-label">{{ t('bundle.stats.presets') }}</span>
-          </div>
-          <div class="bundle-stat">
-            <span class="bundle-stat-num">{{ moveList.length }}</span>
-            <span class="bundle-stat-label">{{ t('bundle.stats.moved') }}</span>
-          </div>
-        </div>
 
         <k-comment v-if="validationErrors.length" type="danger">
           <p v-for="item in validationErrors" :key="item">{{ item }}</p>
@@ -66,254 +31,114 @@
           <p v-for="item in validationWarnings" :key="item">{{ item }}</p>
         </k-comment>
 
-        <!-- Global Bulk Operations Row -->
-        <div class="bundle-bulk-row" v-if="selectedMembers.length">
-          <span class="bulk-label">{{ t('bundle.bulk.label') }}</span>
-          <button class="bundle-section-action" @click="batchSetCreateConfig(true)">{{ t('bundle.bulk.createAll') }}</button>
-          <span class="bundle-section-spacer">|</span>
-          <button class="bundle-section-action" @click="batchSetCreateConfig(false)">{{ t('bundle.bulk.skipAll') }}</button>
+        <div v-if="selectedMembers.length" class="bundle-bulk">
+          <span>{{ t('bundle.bulk.label') }}</span>
+          <el-button type="primary" text size="small" @click="batchSetCreateConfig(true)">{{ t('bundle.bulk.createAll') }}</el-button>
+          <el-button type="primary" text size="small" @click="batchSetCreateConfig(false)">{{ t('bundle.bulk.skipAll') }}</el-button>
           <template v-if="selectedMembers.some(m => hasPreset(m))">
-            <span class="bundle-section-spacer">|</span>
-            <button class="bundle-section-action" @click="batchSetUsePreset(true)">{{ t('bundle.bulk.enablePresets') }}</button>
-            <span class="bundle-section-spacer">|</span>
-            <button class="bundle-section-action" @click="batchSetUsePreset(false)">{{ t('bundle.bulk.disablePresets') }}</button>
+            <el-button type="primary" text size="small" @click="batchSetUsePreset(true)">{{ t('bundle.bulk.enablePresets') }}</el-button>
+            <el-button type="primary" text size="small" @click="batchSetUsePreset(false)">{{ t('bundle.bulk.disablePresets') }}</el-button>
           </template>
         </div>
 
-        <!-- Required members section -->
-        <template v-if="requiredMembers.length">
+        <section v-for="section in sections" :key="section.key" class="bundle-section">
           <div class="bundle-section-title">
-            <k-icon name="check-full"></k-icon>
-            {{ t('bundle.members.required') }} <span class="bundle-section-count">{{ requiredMembers.length }}</span>
-          </div>
-          <div class="bundle-member-list">
-            <section
-              v-for="member in requiredMembers"
-              :key="member.package + ':' + member.plugin"
-              :class="['bundle-member required', { selected: member.selected }]"
-            >
-              <div class="member-row">
-                <div :class="['member-icon', 'cat-' + memberCategory(member.package)]">
-                  <market-icon :name="'outline:' + memberCategory(member.package)"></market-icon>
-                </div>
-                <div class="member-main">
-                  <div class="member-line">
-                    <span class="member-name">{{ formatShortname(member.package) }}</span>
-                    <span class="member-version">{{ member.version }}</span>
-                    <span
-                      v-for="tag in riskTags(member)"
-                      :key="tag.label"
-                      :class="['member-risk', tag.type]"
-                    >{{ tag.label }}</span>
-                  </div>
-                  <div class="member-sub">
-                    <span class="member-fullname">{{ member.package }}</span>
-                    <span class="dot">·</span>
-                    <span>{{ getInstalledText(member.package) }}</span>
-                  </div>
-                  <p v-if="getPackageDescription(member.package)" class="member-desc">
-                    {{ getPackageDescription(member.package) }}
-                  </p>
-                </div>
-                <div class="member-side">
-                  <span class="member-required-pill">
-                    <k-icon name="lock"></k-icon>
-                    {{ t('bundle.members.requiredPill') }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="member-options" v-if="member.selected" @click.stop>
-                <el-checkbox v-model="member.createConfig" :disabled="member.conflict === 'same-group'">{{ t('bundle.members.createConfig') }}</el-checkbox>
-                <el-checkbox
-                  v-if="member.conflict === 'other-config'"
-                  v-model="member.move"
-                >{{ t('bundle.members.moveConfig') }}</el-checkbox>
-                <el-checkbox v-model="member.usePreset" :disabled="!member.createConfig || member.move || !hasPreset(member)">{{ t('bundle.members.usePreset') }}</el-checkbox>
-              </div>
-
-              <!-- Conflict Warning Comments -->
-              <k-comment v-if="member.conflict === 'package-mismatch' && member.selected" type="danger" class="member-warning" @click.stop>
-                <p>{{ t('bundle.conflict.version', { current: store.dependencies?.[member.package]?.resolved, range: member.version }) }}</p>
-              </k-comment>
-
-              <k-comment v-if="member.conflict === 'other-config' && member.selected" type="warning" class="member-warning" @click.stop>
-                <p>{{ t('bundle.conflict.config') }}</p>
-              </k-comment>
-
-              <k-comment v-if="member.conflict === 'same-group' && member.selected" type="info" class="member-warning" @click.stop>
-                <p>{{ t('bundle.conflict.sameGroup') }}</p>
-              </k-comment>
-
-              <!-- Sensitive fields in-place editing -->
-              <div v-if="member.selected && member.usePreset && sensitiveFields(member).length" class="sensitive-fields-editor" @click.stop>
-                <div class="editor-title">{{ t('bundle.editor.sensitive') }}</div>
-                <div class="editor-grid">
-                  <div v-for="field in sensitiveFields(member)" :key="field" class="editor-field-row">
-                    <span class="field-label">{{ field }}:</span>
-                    <el-input
-                      size="small"
-                      v-model="member.config[field]"
-                      :placeholder="t('bundle.editor.placeholder', { field })"
-                      show-password
-                    ></el-input>
-                  </div>
-                </div>
-              </div>
-
-              <details v-if="hasPreset(member) && member.selected" class="member-config" @click.stop>
-                <summary>{{ t('bundle.editor.viewPreset') }}</summary>
-                <div class="json-editor-container">
-                  <textarea
-                    class="raw-json-editor"
-                    :value="formatConfig(member.config)"
-                    @input="onJsonInput(member, $event.target.value)"
-                    rows="8"
-                  ></textarea>
-                  <div v-if="memberJsonErrors[getMemberKey(member)]" class="json-error-text">
-                    {{ t('bundle.editor.jsonError', { error: memberJsonErrors[getMemberKey(member)] }) }}
-                  </div>
-                </div>
-              </details>
-            </section>
-          </div>
-        </template>
-
-        <!-- Optional members section -->
-        <template v-if="optionalMembers.length">
-          <div class="bundle-section-title">
-            <k-icon name="info-full"></k-icon>
-            {{ t('bundle.members.optional') }} <span class="bundle-section-count">{{ optionalMembers.length }}</span>
-            <button class="bundle-section-action" @click="toggleAllOptional">
+            <span>{{ section.label }}</span>
+            <span class="bundle-section-count">{{ section.members.length }}</span>
+            <el-button v-if="section.key === 'optional'" type="primary" text size="small" @click="toggleAllOptional">
               {{ allOptionalSelected ? t('bundle.members.optionalToggleNone') : t('bundle.members.optionalToggleAll') }}
-            </button>
+            </el-button>
           </div>
           <div class="bundle-member-list">
-            <section
-              v-for="member in optionalMembers"
+            <div
+              v-for="member in section.members"
               :key="member.package + ':' + member.plugin"
-              :class="['bundle-member optional', { selected: member.selected }]"
-              role="checkbox"
-              :aria-checked="String(member.selected)"
-              tabindex="0"
-              @click="toggleMember(member)"
-              @keydown.enter.prevent="toggleMember(member)"
-              @keydown.space.prevent="toggleMember(member)"
+              :class="['bundle-member', { selected: member.selected }]"
             >
               <div class="member-row">
-                <el-checkbox :model-value="member.selected" @click.stop @change="toggleMember(member)" class="member-check"></el-checkbox>
-                <div :class="['member-icon', 'cat-' + memberCategory(member.package)]">
-                  <market-icon :name="'outline:' + memberCategory(member.package)"></market-icon>
-                </div>
-                <div class="member-main">
+                <el-checkbox v-model="member.selected" :disabled="member.required" :aria-label="member.package"></el-checkbox>
+                <div :class="['member-main', { toggle: !member.required }]" @click="!member.required && (member.selected = !member.selected)">
                   <div class="member-line">
                     <span class="member-name">{{ formatShortname(member.package) }}</span>
                     <span class="member-version">{{ member.version }}</span>
-                    <span
-                      v-for="tag in riskTags(member)"
-                      :key="tag.label"
-                      :class="['member-risk', tag.type]"
-                    >{{ tag.label }}</span>
+                    <span v-for="tag in riskTags(member)" :key="tag.label" :class="['member-risk', tag.type]">{{ tag.label }}</span>
                   </div>
-                  <div class="member-sub">
-                    <span class="member-fullname">{{ member.package }}</span>
-                    <span class="dot">·</span>
-                    <span>{{ getInstalledText(member.package) }}</span>
-                  </div>
+                  <div class="member-sub">{{ member.package }} · {{ getInstalledText(member.package) }}</div>
                   <p v-if="getPackageDescription(member.package)" class="member-desc">
                     {{ getPackageDescription(member.package) }}
                   </p>
                 </div>
               </div>
 
-              <div class="member-options" v-if="member.selected" @click.stop>
-                <el-checkbox v-model="member.createConfig" :disabled="member.conflict === 'same-group'">{{ t('bundle.members.createConfig') }}</el-checkbox>
-                <el-checkbox
-                  v-if="member.conflict === 'other-config'"
-                  v-model="member.move"
-                >{{ t('bundle.members.moveConfig') }}</el-checkbox>
-                <el-checkbox v-model="member.usePreset" :disabled="!member.createConfig || member.move || !hasPreset(member)">{{ t('bundle.members.usePreset') }}</el-checkbox>
-              </div>
+              <template v-if="member.selected">
+                <div class="member-options">
+                  <el-checkbox v-model="member.createConfig" :disabled="member.conflict === 'same-group'">{{ t('bundle.members.createConfig') }}</el-checkbox>
+                  <el-checkbox v-if="member.conflict === 'other-config'" v-model="member.move">{{ t('bundle.members.moveConfig') }}</el-checkbox>
+                  <el-checkbox v-model="member.usePreset" :disabled="!member.createConfig || member.move || !hasPreset(member)">{{ t('bundle.members.usePreset') }}</el-checkbox>
+                </div>
 
-              <!-- Conflict Warning Comments -->
-              <k-comment v-if="member.conflict === 'package-mismatch' && member.selected" type="danger" class="member-warning" @click.stop>
-                <p>{{ t('bundle.conflict.version', { current: store.dependencies?.[member.package]?.resolved, range: member.version }) }}</p>
-              </k-comment>
+                <k-comment v-if="member.conflict === 'package-mismatch'" type="danger" class="member-warning">
+                  <p>{{ t('bundle.conflict.version', { current: store.dependencies?.[member.package]?.resolved, range: member.version }) }}</p>
+                </k-comment>
+                <k-comment v-if="member.conflict === 'other-config'" type="warning" class="member-warning">
+                  <p>{{ t('bundle.conflict.config') }}</p>
+                </k-comment>
+                <k-comment v-if="member.conflict === 'same-group'" type="info" class="member-warning">
+                  <p>{{ t('bundle.conflict.sameGroup') }}</p>
+                </k-comment>
 
-              <k-comment v-if="member.conflict === 'other-config' && member.selected" type="warning" class="member-warning" @click.stop>
-                <p>{{ t('bundle.conflict.config') }}</p>
-              </k-comment>
-
-              <k-comment v-if="member.conflict === 'same-group' && member.selected" type="info" class="member-warning" @click.stop>
-                <p>{{ t('bundle.conflict.sameGroup') }}</p>
-              </k-comment>
-
-              <!-- Sensitive fields in-place editing -->
-              <div v-if="member.selected && member.usePreset && sensitiveFields(member).length" class="sensitive-fields-editor" @click.stop>
-                <div class="editor-title">{{ t('bundle.editor.sensitive') }}</div>
-                <div class="editor-grid">
-                  <div v-for="field in sensitiveFields(member)" :key="field" class="editor-field-row">
-                    <span class="field-label">{{ field }}:</span>
+                <div v-if="member.usePreset && sensitiveFields(member).length" class="sensitive-fields">
+                  <div class="editor-title">{{ t('bundle.editor.sensitive') }}</div>
+                  <label v-for="field in sensitiveFields(member)" :key="field" class="editor-field">
+                    <span>{{ field }}</span>
                     <el-input
-                      size="small"
                       v-model="member.config[field]"
+                      size="small"
                       :placeholder="t('bundle.editor.placeholder', { field })"
                       show-password
                     ></el-input>
-                  </div>
+                  </label>
                 </div>
-              </div>
 
-              <details v-if="hasPreset(member) && member.selected" class="member-config" @click.stop>
-                <summary>{{ t('bundle.editor.viewPreset') }}</summary>
-                <div class="json-editor-container">
+                <details v-if="hasPreset(member)" class="member-config">
+                  <summary>{{ t('bundle.editor.viewPreset') }}</summary>
                   <textarea
                     class="raw-json-editor"
                     :value="formatConfig(member.config)"
-                    @input="onJsonInput(member, $event.target.value)"
                     rows="8"
+                    @input="onJsonInput(member, $event.target.value)"
                   ></textarea>
                   <div v-if="memberJsonErrors[getMemberKey(member)]" class="json-error-text">
                     {{ t('bundle.editor.jsonError', { error: memberJsonErrors[getMemberKey(member)] }) }}
                   </div>
-                </div>
-              </details>
-            </section>
+                </details>
+              </template>
+            </div>
           </div>
-        </template>
+        </section>
 
-        <!-- Diff: visualized -->
         <div class="bundle-diff">
           <div class="bundle-diff-title">{{ t('bundle.diff.title') }}</div>
-          <div class="bundle-diff-grid">
-            <div class="bundle-diff-cell">
-              <div class="bundle-diff-head"><k-icon name="cube"></k-icon> {{ t('bundle.diff.install') }} <strong>{{ installList.length }}</strong></div>
-              <div class="bundle-diff-tags">
-                <span v-for="item in installList" :key="item" class="bundle-diff-tag install">{{ item }}</span>
-              </div>
+          <dl>
+            <div>
+              <dt>{{ t('bundle.diff.install') }}</dt>
+              <dd>{{ installList.join(t('common.format.listSeparator')) }}</dd>
             </div>
-            <div class="bundle-diff-cell" v-if="configList.length || presetList.length">
-              <div class="bundle-diff-head"><k-icon name="settings"></k-icon> {{ t('bundle.diff.config') }} <strong>{{ configList.length }}</strong></div>
-              <div class="bundle-diff-tags">
-                <span v-for="item in configList" :key="item" :class="['bundle-diff-tag config', { 'with-preset': presetList.includes(item) }]">
-                  {{ item }}
-                  <span v-if="presetList.includes(item)" class="preset-marker">{{ t('bundle.diff.preset') }}</span>
-                </span>
-              </div>
+            <div v-if="configList.length">
+              <dt>{{ t('bundle.diff.config') }}</dt>
+              <dd>
+                {{ configList.map(item => presetList.includes(item) ? t('bundle.diff.withPreset', { name: item }) : item).join(t('common.format.listSeparator')) }}
+              </dd>
             </div>
-            <div class="bundle-diff-cell" v-if="moveList.length">
-              <div class="bundle-diff-head"><k-icon name="arrow-right"></k-icon> {{ t('bundle.diff.move') }} <strong>{{ moveList.length }}</strong></div>
-              <div class="bundle-diff-tags">
-                <span v-for="item in moveList" :key="item" class="bundle-diff-tag move">{{ item }}</span>
-              </div>
+            <div v-if="moveList.length">
+              <dt>{{ t('bundle.diff.move') }}</dt>
+              <dd>{{ moveList.join(t('common.format.listSeparator')) }}</dd>
             </div>
-            <div class="bundle-diff-cell" v-if="skippedConfigList.length">
-              <div class="bundle-diff-head"><k-icon name="info-full"></k-icon> {{ t('bundle.diff.skip') }} <strong>{{ skippedConfigList.length }}</strong></div>
-              <div class="bundle-diff-tags">
-                <span v-for="item in skippedConfigList" :key="item" class="bundle-diff-tag skip">{{ item }}</span>
-              </div>
+            <div v-if="skippedConfigList.length">
+              <dt>{{ t('bundle.diff.skip') }}</dt>
+              <dd>{{ skippedConfigList.join(t('common.format.listSeparator')) }}</dd>
             </div>
-          </div>
+          </dl>
         </div>
       </template>
     </template>
@@ -321,7 +146,7 @@
     <template #footer>
       <el-button @click="close">{{ t('bundle.actions.cancel') }}</el-button>
       <el-button type="primary" :loading="installing" :disabled="!canInstall" @click="confirmInstall">
-        {{ t('bundle.actions.install') }} <span v-if="selectedMembers.length" class="footer-count">({{ selectedMembers.length }})</span>
+        {{ t('bundle.actions.install') }}<template v-if="selectedMembers.length"> ({{ selectedMembers.length }})</template>
       </el-button>
     </template>
   </el-dialog>
@@ -330,7 +155,7 @@
 <script setup lang="ts">
 
 import { computed, reactive, ref, watch } from 'vue'
-import { message, send, socket, store, useConfig, useContext } from '@koishijs/client'
+import { message, send, socket, store, useContext } from '@koishijs/client'
 import type { Registry } from '@koishijs/registry'
 import {
   BundleInstallMember,
@@ -351,10 +176,7 @@ import {
   resetInstallFallbackState,
   type InstallOptions,
 } from './utils'
-import { resolveCategory } from '../market/utils'
-import MarketIcon from '../market/icons'
 import { satisfies } from 'semver'
-import { getFrontendMode } from '../utils'
 import { useMarketNextI18n } from '../i18n'
 import { getMarketObject, loadMarketObjects } from '../market/state'
 
@@ -366,11 +188,8 @@ const bundle = ref<PluginBundleManifest>()
 const resolvedBundleVersion = ref('')
 const members = reactive<BundleInstallMember[]>([])
 const ctx = useContext()
-const config = useConfig()
 const { t, locale } = useMarketNextI18n()
 
-const frontendMode = computed(() => getFrontendMode(config.value))
-const modeClass = computed(() => `market-mode-${frontendMode.value}`)
 
 const title = computed(() => activeBundle.value?.shortname || activeBundle.value?.package.name || t('bundle.label'))
 const bundleVersion = computed(() => resolvedBundleVersion.value || activeBundle.value?.package.version || '')
@@ -383,19 +202,16 @@ const validation = computed(() => {
 const validationErrors = computed(() => validation.value.errors)
 const validationWarnings = computed(() => validation.value.warnings)
 const selectedMembers = computed(() => members.filter(member => member.selected))
-const requiredMembers = computed(() => members.filter(m => m.required))
 const optionalMembers = computed(() => members.filter(m => !m.required))
-const progressPercent = computed(() => members.length ? Math.round(selectedMembers.value.length / members.length * 100) : 0)
+const sections = computed(() => [
+  { key: 'required', label: t('bundle.members.required'), members: members.filter(m => m.required) },
+  { key: 'optional', label: t('bundle.members.optional'), members: optionalMembers.value },
+].filter(section => section.members.length))
 const allOptionalSelected = computed(() => optionalMembers.value.length > 0 && optionalMembers.value.every(m => m.selected))
 
 function toggleAllOptional() {
   const target = !allOptionalSelected.value
   for (const m of optionalMembers.value) m.selected = target
-}
-
-function memberCategory(name: string) {
-  const data = getMarketObject(name)
-  return resolveCategory(data?.category)
 }
 
 const installList = computed(() => {
@@ -529,20 +345,6 @@ function getPackageDescription(name: string) {
   }
 }
 
-function formatUser(user: any) {
-  if (!user) return ''
-  if (typeof user === 'string') return user
-  return user.name || user.username || user.email || ''
-}
-
-function getAuthor(name: string) {
-  return formatUser(memberInfo(name)?.package?.author)
-}
-
-function getMaintainer(name: string) {
-  return formatUser(memberInfo(name)?.package?.maintainers?.[0])
-}
-
 function getInstalledText(name: string) {
   const dep = store.dependencies?.[name]
   if (dep?.resolved) return t('bundle.members.installed', { version: dep.resolved })
@@ -577,10 +379,6 @@ function sensitiveFields(member: BundleInstallMember) {
 
 function formatConfig(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2)
-}
-
-function toggleMember(member: BundleInstallMember) {
-  member.selected = !member.selected
 }
 
 function close() {
@@ -717,667 +515,294 @@ function formatInstallError(error: unknown) {
 </script>
 
 <style lang="scss">
-
 .bundle-install-panel {
-  --bundle-color: #8b5cf6;
-  --bundle-surface: var(--k-card-bg, var(--el-bg-color-overlay, var(--el-bg-color, #ffffff)));
-  --bundle-surface-muted: var(--k-side-bg, var(--el-fill-color-lighter, var(--bundle-surface)));
-  --bundle-text: var(--fg1, var(--el-text-color-primary, currentColor));
-  --bundle-text-muted: var(--fg2, var(--el-text-color-regular, currentColor));
-  --bundle-border-base: var(--k-color-border, var(--el-border-color, #dcdfe6));
-  --bundle-border: color-mix(in srgb, var(--bundle-border-base) 82%, var(--bundle-text) 10%);
-  --bundle-color-soft: color-mix(in srgb, var(--bundle-color) 12%, transparent);
-  --bundle-color-border: color-mix(in srgb, var(--bundle-color) 32%, var(--bundle-border));
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 24px);
-  max-height: calc(100dvh - 24px);
-  overflow: hidden;
-  color: var(--bundle-text);
-  border: 1px solid var(--bundle-border);
-  border-radius: 10px;
-  background: var(--bundle-surface);
-  box-shadow: none;
-
   .el-dialog__header {
-    flex: 0 0 auto;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid color-mix(in srgb, var(--bundle-border) 68%, transparent);
-    background: color-mix(in srgb, var(--bundle-surface-muted) 54%, var(--bundle-surface));
+    padding-right: 36px;
   }
 
-  .el-dialog__body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
-    overscroll-behavior: contain;
-    background: var(--bundle-surface);
-  }
-
-  .el-dialog__body,
-  .member-config pre {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--bundle-color) 42%, var(--fg3)) transparent;
-
-    &::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      border: 2px solid transparent;
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--bundle-color) 28%, var(--fg3));
-      background-clip: content-box;
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background: color-mix(in srgb, var(--bundle-color) 45%, var(--fg2));
-      background-clip: content-box;
-    }
-
-    &::-webkit-scrollbar-corner {
-      background: transparent;
-    }
-  }
-
-  .el-dialog__footer {
-    flex: 0 0 auto;
-    border-top: 1px solid color-mix(in srgb, var(--bundle-border) 72%, transparent);
-    background:
-      linear-gradient(180deg, color-mix(in srgb, var(--bundle-color) 4%, transparent), transparent),
-      color-mix(in srgb, var(--bundle-surface) 86%, var(--bundle-surface-muted) 14%);
-  }
-
-  // Hero
-  .bundle-hero {
+  .bundle-title {
     display: flex;
-    align-items: center;
-    gap: 0.85rem;
-  }
-
-  .bundle-hero-icon {
-    flex: 0 0 auto;
-    width: 2.6rem;
-    height: 2.6rem;
-    display: grid;
-    place-items: center;
-    border-radius: 10px;
-    background: linear-gradient(135deg,
-      color-mix(in srgb, var(--bundle-color) 26%, transparent),
-      color-mix(in srgb, var(--bundle-color) 12%, transparent));
-    color: var(--bundle-color);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bundle-surface) 82%, white 18%), 0 4px 14px color-mix(in srgb, var(--bundle-color) 16%, transparent);
-    .k-icon { width: 1.4rem; height: 1.4rem; }
-  }
-
-  .bundle-hero-text {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .bundle-hero-title {
-    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    font-size: 1.05rem;
-    font-weight: 600;
   }
 
   .bundle-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.26rem;
-    font-size: 0.7rem;
-    padding: 0.08rem 0.45rem;
-    border-radius: 999px;
-    color: var(--bundle-color);
-    background: var(--bundle-color-soft);
-    border: 1px solid var(--bundle-color-border);
-    font-weight: 500;
+    border-radius: 4px;
+    padding: 0 0.375rem;
+    color: var(--k-color-primary);
+    background: color-mix(in srgb, var(--k-color-primary) 12%, transparent);
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+  }
 
-    .market-icon {
-      width: 0.72rem;
-      height: 0.72rem;
-      flex: 0 0 auto;
+  .bundle-meta {
+    margin-top: 0.25rem;
+    color: var(--fg3);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+  }
+
+  .bundle-state {
+    padding: 2rem 1rem;
+    color: var(--fg3);
+    text-align: center;
+  }
+
+  .bundle-description {
+    margin: 0 0 0.75rem;
+    color: var(--fg2);
+    line-height: 1.6;
+  }
+
+  .bundle-bulk {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+    color: var(--fg3);
+    font-size: 0.8125rem;
+
+    .el-button {
+      margin-left: 0;
     }
   }
 
-  .bundle-hero-meta {
-    margin-top: 0.15rem;
-    font-size: 0.78rem;
-    color: var(--fg3);
-    display: flex;
-    gap: 0.35rem;
-    .dot { opacity: 0.5; }
+  .bundle-section + .bundle-section {
+    margin-top: 1rem;
   }
 
-  // Description
-  .bundle-description {
-    margin: 0.45rem 0 0.4rem;
-    color: var(--fg1);
-    font-size: 0.88rem;
-    line-height: 1.45;
-  }
-
-  // Stats row
-  .bundle-stats {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: 0.48rem;
-    margin: 0.5rem 0 0.65rem;
-  }
-
-  .bundle-stat {
-    position: relative;
-    padding: 0.45rem 0.62rem;
-    border: 1px solid var(--bundle-border);
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--bundle-color) 4%, var(--bundle-surface));
-    overflow: hidden;
-  }
-
-  .bundle-stat-num {
-    display: block;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--bundle-color);
-    line-height: 1.1;
-  }
-
-  .bundle-stat-label {
-    display: block;
-    margin-top: 0.15rem;
-    font-size: 0.72rem;
-    color: var(--fg2);
-  }
-
-  .bundle-stat-bar {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    height: 3px;
-    width: 100%;
-    background: color-mix(in srgb, var(--bundle-color) 10%, transparent);
-  }
-
-  .bundle-stat-fill {
-    height: 100%;
-    background: linear-gradient(90deg,
-      color-mix(in srgb, var(--bundle-color) 60%, transparent),
-      var(--bundle-color));
-    transition: width 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  // Section title
   .bundle-section-title {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    margin: 0.72rem 0 0.36rem;
-    font-size: 0.78rem;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--fg2);
 
-    .k-icon { width: 0.9rem; height: 0.9rem; color: var(--bundle-color); }
+    .el-button {
+      margin-left: auto;
+    }
   }
 
   .bundle-section-count {
-    font-size: 0.7rem;
-    color: var(--fg3);
-    font-weight: 500;
-    text-transform: none;
+    border-radius: 10px;
+    padding: 0 0.375rem;
+    color: var(--fg2);
+    background: var(--k-side-bg);
+    font-size: 0.75rem;
+    font-weight: normal;
+    line-height: 1.25rem;
   }
 
-  .bundle-section-action {
-    margin-left: auto;
-    border: none;
-    background: none;
-    color: var(--bundle-color);
-    cursor: pointer;
-    font-size: 0.74rem;
-    padding: 2px 6px;
-    border-radius: 6px;
-    transition: background 0.15s;
-    &:hover { background: var(--bundle-color-soft); }
-  }
-
-  // Member list
   .bundle-member-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    padding: 2px;
+    border: 1px solid var(--k-color-border);
+    border-radius: 8px;
+    overflow: hidden;
   }
 
   .bundle-member {
-    border: 1px solid var(--bundle-border);
-    border-radius: 8px;
-    padding: 0.52rem 0.62rem;
-    background: var(--bundle-surface);
-    transition: border-color 0.18s, background 0.18s, box-shadow 0.18s, transform 0.18s;
-
-    &.optional {
-      cursor: pointer;
-      &:hover, &:focus-visible {
-        border-color: var(--bundle-color-border);
-        outline: none;
-      }
-    }
-
-    &.selected {
-      border-color: var(--bundle-color-border);
-      background: linear-gradient(90deg, var(--bundle-color-soft), transparent 50%), var(--bundle-surface);
-      box-shadow: inset 3px 0 0 var(--bundle-color);
-    }
-
-    &.required {
-      background: linear-gradient(90deg, color-mix(in srgb, var(--k-color-success) 4%, transparent), transparent 50%), var(--bundle-surface);
-      box-shadow: inset 3px 0 0 var(--k-color-success);
-    }
+    display: grid;
+    gap: 0.5rem;
+    margin-top: -1px;
+    border-top: 1px solid var(--k-color-divider);
+    padding: 0.75rem 0.875rem;
   }
 
   .member-row {
     display: flex;
     align-items: flex-start;
-    gap: 0.56rem;
+    gap: 0.75rem;
+
+    .el-checkbox {
+      height: 1.5rem;
+    }
   }
 
-  .member-check { flex: 0 0 auto; margin-top: 2px; }
+  .member-main {
+    min-width: 0;
+    flex: 1 1 auto;
 
-  .member-icon {
-    flex: 0 0 auto;
-    width: 1.95rem;
-    height: 1.95rem;
-    display: grid;
-    place-items: center;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    background: linear-gradient(135deg,
-      color-mix(in srgb, var(--c, var(--fg3)) 18%, var(--bundle-surface)),
-      color-mix(in srgb, var(--c, var(--fg3)) 8%, var(--bundle-surface)));
-    border-color: color-mix(in srgb, var(--c, var(--fg3)) 28%, var(--bundle-border));
-    color: var(--c, var(--fg2));
-
-    .market-icon { width: 1.05rem; height: 1.05rem; }
-
-    &.cat-adapter    { --c: #38bdf8; }
-    &.cat-general    { --c: #4ade80; }
-    &.cat-extension  { --c: #a78bfa; }
-    &.cat-webui      { --c: #fb923c; }
-    &.cat-manage     { --c: #facc15; }
-    &.cat-preset     { --c: #60a5fa; }
-    &.cat-image      { --c: #f472b6; }
-    &.cat-media      { --c: #e879f9; }
-    &.cat-tool       { --c: #94a3b8; }
-    &.cat-life       { --c: #34d399; }
-    &.cat-ai         { --c: #818cf8; }
-    &.cat-meme       { --c: #fbbf24; }
-    &.cat-game       { --c: #f87171; }
-    &.cat-gametool   { --c: #c084fc; }
-    &.cat-other      { --c: #64748b; }
+    &.toggle {
+      cursor: pointer;
+    }
   }
-
-  .member-main { flex: 1 1 auto; min-width: 0; }
 
   .member-line {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.375rem;
   }
 
   .member-name {
     font-weight: 600;
-    font-size: 0.92rem;
   }
 
   .member-version {
-    font-family: var(--font-mono, monospace);
-    font-size: 0.74rem;
     color: var(--fg3);
-    padding: 0 0.32rem;
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--fg3) 10%, transparent);
-  }
-
-  .member-sub {
-    margin-top: 0.18rem;
-    font-size: 0.72rem;
-    color: var(--fg3);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-    align-items: center;
-    .dot { opacity: 0.4; }
-  }
-
-  .member-fullname {
-    font-family: var(--font-mono, monospace);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 22rem;
-  }
-
-  .member-desc {
-    margin: 0.28rem 0 0;
-    font-size: 0.78rem;
-    color: var(--fg2);
-    line-height: 1.4;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-  }
-
-  .member-side { flex: 0 0 auto; }
-
-  .member-required-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    padding: 0.1rem 0.45rem;
-    font-size: 0.68rem;
-    border-radius: 999px;
-    color: var(--k-color-success);
-    background: color-mix(in srgb, var(--k-color-success) 10%, transparent);
-    border: 1px solid color-mix(in srgb, var(--k-color-success) 28%, var(--bundle-border));
-    .k-icon { width: 0.7rem; height: 0.7rem; }
+    font-size: 0.8125rem;
   }
 
   .member-risk {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 6px;
-    padding: 0.05rem 0.4rem;
-    font-size: 0.68rem;
-    line-height: 1.4;
+    border-radius: 4px;
+    padding: 0 0.375rem;
     color: var(--fg2);
-    background: color-mix(in srgb, var(--fg3) 10%, transparent);
-    font-weight: 500;
+    background: var(--k-side-bg);
+    font-size: 0.75rem;
+    line-height: 1.25rem;
 
-    &.success { color: var(--k-color-success); background: color-mix(in srgb, var(--k-color-success) 12%, transparent); }
-    &.danger  { color: var(--k-color-danger);  background: color-mix(in srgb, var(--k-color-danger) 12%, transparent); }
-    &.warning { color: var(--k-color-warning); background: color-mix(in srgb, var(--k-color-warning) 14%, transparent); }
-    &.info    { color: var(--k-color-primary); background: color-mix(in srgb, var(--k-color-primary) 12%, transparent); }
+    &.success {
+      color: var(--k-color-success);
+      background: color-mix(in srgb, var(--k-color-success) 12%, transparent);
+    }
+
+    &.warning {
+      color: var(--warning);
+      background: color-mix(in srgb, var(--warning) 12%, transparent);
+    }
+
+    &.danger {
+      color: var(--danger);
+      background: color-mix(in srgb, var(--danger) 12%, transparent);
+    }
+  }
+
+  .member-sub {
+    color: var(--fg3);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+  }
+
+  .member-desc {
+    margin: 0.25rem 0 0;
+    color: var(--fg2);
+    font-size: 0.8125rem;
+    line-height: 1.5;
   }
 
   .member-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem 0.85rem;
-    margin: 0.42rem 0 0 2.55rem;
-    padding-top: 0.38rem;
-    border-top: 1px dashed color-mix(in srgb, var(--bundle-border) 60%, transparent);
-    cursor: default;
-    font-size: 0.82rem;
+    gap: 0 1.25rem;
+    padding-left: 1.75rem;
+
+    .el-checkbox {
+      margin-right: 0;
+    }
   }
 
-  .member-warning.k-comment {
-    margin: 0.4rem 0 0 2.55rem;
+  .member-warning {
+    margin: 0 0 0 1.75rem;
+  }
+
+  .sensitive-fields {
+    display: grid;
+    gap: 0.5rem;
+    margin-left: 1.75rem;
+
+    .editor-title {
+      color: var(--fg2);
+      font-size: 0.8125rem;
+    }
+  }
+
+  .editor-field {
+    display: grid;
+    grid-template-columns: minmax(6rem, auto) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+
+    > span {
+      color: var(--fg2);
+      font-size: 0.8125rem;
+      overflow-wrap: anywhere;
+    }
   }
 
   .member-config {
-    margin: 0.42rem 0 0 2.55rem;
-    cursor: default;
+    margin-left: 1.75rem;
 
     summary {
+      color: var(--k-color-primary);
+      font-size: 0.8125rem;
       cursor: pointer;
-      color: var(--bundle-color);
-      font-size: 0.78rem;
-      user-select: none;
     }
   }
 
-  .bundle-bulk-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.6rem 0 0.8rem;
-    padding: 0.5rem 0.65rem;
-    background: color-mix(in srgb, var(--bundle-color) 4%, var(--bundle-surface-muted));
-    border: 1px solid color-mix(in srgb, var(--bundle-color) 12%, var(--bundle-border));
-    border-radius: 8px;
-    font-size: 0.76rem;
+  .raw-json-editor {
+    box-sizing: border-box;
+    width: 100%;
+    margin-top: 0.5rem;
+    border: 1px solid var(--k-color-border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    color: var(--fg1);
+    background: var(--k-side-bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    resize: vertical;
 
-    .bulk-label {
-      font-weight: 600;
-      color: var(--fg2);
-      margin-right: 0.4rem;
-    }
-
-    .bundle-section-spacer {
-      color: color-mix(in srgb, var(--fg3) 50%, transparent);
-      margin: 0 0.2rem;
+    &:focus {
+      border-color: var(--k-color-primary);
+      outline: none;
     }
   }
 
-  .sensitive-fields-editor {
-    margin: 0.5rem 0 0.25rem 2.55rem;
-    padding: 0.55rem 0.65rem;
-    border-radius: 8px;
-    border: 1px solid color-mix(in srgb, var(--k-color-warning) 24%, var(--bundle-border));
-    background: color-mix(in srgb, var(--k-color-warning) 4%, var(--bundle-surface));
-
-    .editor-title {
-      font-size: 0.76rem;
-      font-weight: 600;
-      color: var(--k-color-warning);
-      margin-bottom: 0.45rem;
-    }
-
-    .editor-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-      gap: 0.45rem;
-    }
-
-    .editor-field-row {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-
-      .field-label {
-        font-family: var(--font-mono, monospace);
-        font-size: 0.74rem;
-        color: var(--fg2);
-        word-break: break-all;
-        min-width: 4.5rem;
-      }
-    }
+  .json-error-text {
+    margin-top: 0.25rem;
+    color: var(--danger);
+    font-size: 0.8125rem;
   }
 
-  .json-editor-container {
-    margin-top: 0.4rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-
-    .raw-json-editor {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 0.55rem 0.7rem;
-      border-radius: 8px;
-      background: color-mix(in srgb, var(--bundle-color) 5%, var(--k-color-code-bg, var(--bundle-surface-muted)));
-      border: 1px solid color-mix(in srgb, var(--bundle-color) 14%, var(--bundle-border));
-      font-family: var(--font-mono, monospace);
-      font-size: 0.74rem;
-      color: var(--fg1);
-      resize: vertical;
-
-      &:focus {
-        border-color: var(--bundle-color-border);
-        outline: none;
-        box-shadow: 0 0 8px color-mix(in srgb, var(--bundle-color) 12%, transparent);
-      }
-    }
-
-    .json-error-text {
-      font-size: 0.7rem;
-      color: var(--k-color-danger);
-      font-weight: 500;
-    }
-  }
-
-  // Diff
   .bundle-diff {
-    margin-top: 0.75rem;
-    padding: 0.6rem 0.72rem;
+    margin-top: 1rem;
+    border: 1px solid var(--k-color-border);
     border-radius: 8px;
-    background: linear-gradient(135deg, var(--bundle-color-soft), transparent 60%), color-mix(in srgb, var(--bundle-surface-muted) 70%, var(--bundle-surface));
-    border: 1px solid var(--bundle-color-border);
+    padding: 0.75rem 0.875rem;
+
+    dl {
+      display: grid;
+      gap: 0.375rem;
+      margin: 0.5rem 0 0;
+    }
+
+    dl div {
+      display: grid;
+      grid-template-columns: 6rem minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+
+    dt {
+      color: var(--fg3);
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
   }
 
   .bundle-diff-title {
-    font-size: 0.78rem;
     font-weight: 600;
-    color: var(--bundle-color);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.5rem;
-  }
-
-  .bundle-diff-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: 0.48rem;
-  }
-
-  .bundle-diff-cell {
-    background: var(--bundle-surface);
-    border: 1px solid color-mix(in srgb, var(--bundle-border) 70%, transparent);
-    border-radius: 8px;
-    padding: 0.45rem 0.55rem;
-  }
-
-  .bundle-diff-head {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--fg1);
-
-    .k-icon { width: 0.85rem; height: 0.85rem; color: var(--bundle-color); }
-    strong {
-      margin-left: auto;
-      color: var(--bundle-color);
-      font-weight: 700;
-    }
-  }
-
-  .bundle-diff-tags {
-    margin-top: 0.4rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-  }
-
-  .bundle-diff-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.08rem 0.42rem;
-    font-size: 0.7rem;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    background: color-mix(in srgb, var(--fg3) 8%, transparent);
-    color: var(--fg2);
-
-    &.install { color: var(--k-color-success); background: color-mix(in srgb, var(--k-color-success) 10%, transparent); border-color: color-mix(in srgb, var(--k-color-success) 25%, transparent); }
-    &.config  { color: var(--k-color-primary); background: color-mix(in srgb, var(--k-color-primary) 10%, transparent); border-color: color-mix(in srgb, var(--k-color-primary) 25%, transparent); }
-    &.move    { color: var(--k-color-warning); background: color-mix(in srgb, var(--k-color-warning) 10%, transparent); border-color: color-mix(in srgb, var(--k-color-warning) 25%, transparent); }
-    &.skip    { color: var(--fg3); }
-
-    .preset-marker {
-      font-size: 0.62rem;
-      padding: 0 0.25rem;
-      border-radius: 4px;
-      background: color-mix(in srgb, var(--bundle-color) 18%, transparent);
-      color: var(--bundle-color);
-    }
-  }
-
-  .footer-count {
-    margin-left: 0.3rem;
-    font-weight: 700;
-    font-size: 0.85em;
-    opacity: 0.85;
-  }
-
-  // Loading
-  .bundle-loading {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem 0;
-    color: var(--fg2);
-  }
-
-  .bundle-loading-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid color-mix(in srgb, var(--bundle-color) 30%, transparent);
-    border-top-color: var(--bundle-color);
-    border-radius: 50%;
-    animation: bundle-spin 0.7s linear infinite;
-  }
-
-  &.market-mode-polished {
-    border-radius: 16px;
-    border-color: color-mix(in srgb, var(--bundle-color) 14%, var(--bundle-border));
-    background:
-      linear-gradient(135deg, color-mix(in srgb, var(--bundle-color) 5%, transparent), transparent 42%),
-      var(--bundle-surface);
-    box-shadow: 0 18px 42px color-mix(in srgb, var(--bundle-text) 12%, transparent);
-
-    .bundle-member {
-      border-radius: 12px;
-      background: color-mix(in srgb, var(--bundle-surface) 90%, var(--bundle-surface-muted) 10%);
-      backdrop-filter: blur(10px);
-
-      &.optional:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px color-mix(in srgb, var(--bundle-color) 10%, transparent);
-      }
-
-      &.selected {
-        box-shadow: inset 4px 0 0 var(--bundle-color), 0 6px 16px color-mix(in srgb, var(--bundle-color) 6%, transparent);
-      }
-
-      &.required {
-        box-shadow: inset 4px 0 0 var(--k-color-success), 0 6px 16px color-mix(in srgb, var(--k-color-success) 4%, transparent);
-      }
-    }
-
-    .bundle-diff {
-      background: linear-gradient(135deg, color-mix(in srgb, var(--bundle-color) 12%, transparent), transparent 60%), color-mix(in srgb, var(--bundle-surface-muted) 72%, var(--bundle-surface));
-      backdrop-filter: blur(12px);
-      box-shadow: 0 10px 24px color-mix(in srgb, var(--bundle-text) 6%, transparent);
-    }
-  }
-
-  @keyframes bundle-spin {
-    to { transform: rotate(360deg); }
-  }
-
-  @media (max-width: 640px) {
-    .el-dialog__body {
-      padding: 0 12px 12px;
-    }
-
-    .bundle-stats { grid-template-columns: 1fr 1fr; }
-    .bundle-stat:first-child { grid-column: 1 / -1; }
-
-    .member-options, .member-warning.k-comment, .member-config { margin-left: 0; }
   }
 }
 
+@media (max-width: 768px) {
+  .bundle-install-panel {
+    .member-options,
+    .member-warning,
+    .sensitive-fields,
+    .member-config {
+      margin-left: 0;
+      padding-left: 0;
+    }
+
+    .editor-field,
+    .bundle-diff dl div {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+  }
+}
 </style>

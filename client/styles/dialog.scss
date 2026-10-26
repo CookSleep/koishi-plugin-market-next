@@ -1,0 +1,32 @@
+// Dialogs keep Koishi's own el-dialog look. This only adds a scrollable body
+// for long content and a footer that wraps on narrow screens.
+.market-dialog {
+  max-width: calc(100vw - 32px);
+
+  .el-dialog__body {
+    max-height: calc(100vh - 14rem);
+    overflow-y: auto;
+  }
+
+  .el-dialog__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+
+    .el-button + .el-button {
+      margin-left: 0;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .el-overlay-dialog .market-dialog {
+    max-width: none;
+
+    .el-dialog__body {
+      max-height: 70vh;
+    }
+  }
+}

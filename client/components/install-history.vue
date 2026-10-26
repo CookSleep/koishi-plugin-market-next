@@ -3,46 +3,36 @@
     v-model="showInstallHistory"
     append-to-body
     destroy-on-close
-    :class="['install-history-dialog', modeClass]"
+    :class="['market-dialog', 'install-history-dialog']"
     :title="t('operations.history.title')"
-    width="min(1040px, calc(100vw - 24px))"
+    width="960px"
   >
-    <div class="history-toolbar">
-      <span>{{ loading ? t('operations.history.syncing') : t('operations.history.count', { count: entries.length }) }}</span>
-      <el-button :loading="loading" @click="loadHistory(true)">{{ t('operations.history.refresh') }}</el-button>
+    <div v-if="!entries.length" class="history-state" :class="{ error: loadError }">
+      {{ loading ? t('operations.history.reading') : loadError || t('operations.history.empty') }}
     </div>
 
-    <div class="history-layout">
-      <aside class="history-sidebar">
-        <div class="list-heading">
-          <span>{{ t('operations.history.records') }}</span>
-          <span>{{ entries.length }}</span>
-        </div>
-        <div class="history-list" :class="{ loading }">
-          <button
-            v-for="entry in entries"
-            :key="entry.id"
-            type="button"
-            :class="['history-row', { active: entry.id === selectedId }]"
-            @click="selectEntry(entry.id)"
-          >
-            <span :class="['status-dot', entry.status]"></span>
-            <span class="row-main">
-              <span class="row-title">{{ historyTitle(entry) }}</span>
-              <span class="row-packages">{{ historyPackages(entry) }}</span>
-              <span class="row-meta">
-                {{ formatDate(entry.startedAt) }}
-                <template v-if="entry.duration != null"> · {{ formatDuration(entry.duration) }}</template>
-              </span>
+    <div v-else class="history-layout">
+      <div class="history-list">
+        <button
+          v-for="entry in entries"
+          :key="entry.id"
+          type="button"
+          :class="['history-row', { active: entry.id === selectedId }]"
+          @click="selectEntry(entry.id)"
+        >
+          <span class="row-main">
+            <span class="row-title">
+              {{ historyTitle(entry) }}
+              <span :class="['status-tag', entry.status]">{{ statusText(entry.status) }}</span>
             </span>
-            <span :class="['status-label', entry.status]">{{ statusText(entry.status) }}</span>
-          </button>
-
-          <div v-if="loading && !entries.length" class="history-state">{{ t('operations.history.reading') }}</div>
-          <div v-else-if="loadError && !entries.length" class="history-state error">{{ loadError }}</div>
-          <div v-else-if="!entries.length" class="history-state">{{ t('operations.history.empty') }}</div>
-        </div>
-      </aside>
+            <span class="row-packages">{{ historyPackages(entry) }}</span>
+            <span class="row-meta">
+              {{ formatDate(entry.startedAt) }}
+              <template v-if="entry.duration != null"> · {{ formatDuration(entry.duration) }}</template>
+            </span>
+          </span>
+        </button>
+      </div>
 
       <section class="history-detail">
         <div v-if="detailLoading" class="history-state">{{ t('operations.history.readingLog') }}</div>
@@ -50,53 +40,41 @@
         <template v-else-if="detail">
           <header class="detail-header">
             <div class="detail-title">
-              <div class="detail-status">
-                <span :class="['status-dot', detail.status]"></span>
-                <span :class="['status-label', detail.status]">{{ statusText(detail.status) }}</span>
-              </div>
-              <h3>{{ historyTitle(detail) }}</h3>
+              <h3>
+                {{ historyTitle(detail) }}
+                <span :class="['status-tag', detail.status]">{{ statusText(detail.status) }}</span>
+              </h3>
               <p>
                 {{ formatDate(detail.startedAt) }}
                 <template v-if="detail.duration != null"> · {{ formatDuration(detail.duration) }}</template>
               </p>
             </div>
-            <div class="detail-actions">
-              <el-button size="small" @click="copyLog">{{ t('operations.history.copyLog') }}</el-button>
-            </div>
+            <el-button size="small" @click="copyLog">{{ t('operations.history.copyLog') }}</el-button>
           </header>
 
           <dl class="detail-meta">
-            <div><dt>{{ t('operations.history.dependencyCount') }}</dt><dd>{{ detail.changes.length || t('operations.history.unknown') }}</dd></div>
             <div><dt>{{ t('operations.history.source') }}</dt><dd :title="detail.installEndpoint">{{ formatEndpoint(detail.installEndpoint) }}</dd></div>
             <div><dt>{{ t('operations.history.logSize') }}</dt><dd>{{ formatSize(detail.size) }}</dd></div>
           </dl>
 
-          <section v-if="detail.changes.length" class="versions-section">
-            <div class="section-heading">
-              <span>{{ t('operations.history.versionChanges') }}</span>
-              <span>{{ t('operations.history.items', { count: detail.changes.length }) }}</span>
-            </div>
-            <div class="change-list">
-              <div v-for="change in detail.changes" :key="change.name" class="change-row">
-                <strong :title="change.name">{{ change.name }}</strong>
-                <span class="version-value" :title="beforeVersion(change)">
-                  <span class="version-text">{{ beforeVersion(change) }}</span>
-                </span>
+          <div v-if="detail.changes.length" class="change-list">
+            <div v-for="change in detail.changes" :key="change.name" class="change-row">
+              <strong :title="change.name">{{ change.name }}</strong>
+              <span class="change-versions">
+                <span :title="beforeVersion(change)">{{ beforeVersion(change) }}</span>
                 <span class="version-arrow">→</span>
-                <span class="version-value after" :title="afterVersion(change)">
-                  <span class="version-text">{{ afterVersion(change) }}</span>
-                </span>
-              </div>
+                <span class="after" :title="afterVersion(change)">{{ afterVersion(change) }}</span>
+              </span>
             </div>
-          </section>
+          </div>
 
           <p v-if="detail.truncated" class="truncated-note">{{ t('operations.history.truncated') }}</p>
         </template>
-        <div v-else class="history-state">{{ t('operations.history.selectRecord') }}</div>
       </section>
     </div>
 
     <template #footer>
+      <el-button class="history-refresh" :loading="loading" @click="loadHistory(true)">{{ t('operations.history.refresh') }}</el-button>
       <el-button @click="showInstallHistory = false">{{ t('operations.history.close') }}</el-button>
     </template>
   </el-dialog>
@@ -104,15 +82,12 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { message, send, useConfig } from '@koishijs/client'
+import { message, send } from '@koishijs/client'
 import type { InstallHistoryChange, InstallHistoryEntry, InstallLogDetail } from 'koishi-plugin-market-next'
-import { getFrontendMode } from '../utils'
 import { showInstallHistory } from './utils'
 import { useMarketNextI18n } from '../i18n'
 
-const config = useConfig()
 const { t, locale } = useMarketNextI18n()
-const modeClass = computed(() => `market-mode-${getFrontendMode(config.value)}`)
 const entries = ref<InstallHistoryEntry[]>([])
 const selectedId = ref('')
 const detail = ref<InstallLogDetail>()
@@ -265,508 +240,226 @@ function formatSize(value: number) {
 
 <style lang="scss">
 .install-history-dialog {
-  --history-surface: var(--k-card-bg, var(--el-bg-color-overlay, var(--el-bg-color)));
-  --history-muted: var(--k-side-bg, var(--el-fill-color-light));
-  --history-text: var(--fg1, var(--el-text-color-primary));
-  --history-text-muted: var(--fg2, var(--el-text-color-regular));
-  --history-border: var(--k-color-border, var(--el-border-color));
-  --history-primary: var(--k-color-primary, var(--el-color-primary));
-  --history-success: var(--k-color-success, var(--el-color-success));
-  --history-danger: var(--k-color-danger, var(--el-color-danger));
-  --history-warning: var(--k-color-warning, var(--el-color-warning));
+  .history-state {
+    padding: 3rem 1rem;
+    color: var(--fg3);
+    text-align: center;
 
-  color: var(--history-text);
-  background: var(--history-surface);
-  border: 1px solid color-mix(in srgb, var(--history-border) 84%, transparent);
-
-  .el-dialog__title {
-    color: var(--history-text);
-    font-size: 18px;
-    font-weight: 600;
-  }
-
-  .el-dialog__header,
-  .el-dialog__footer {
-    border-color: color-mix(in srgb, var(--history-border) 78%, transparent);
-  }
-
-  .el-dialog__header {
-    border-bottom: 1px solid color-mix(in srgb, var(--history-border) 78%, transparent);
-  }
-
-  .el-dialog__body {
-    padding-top: 14px;
-  }
-
-  .el-dialog__footer {
-    border-top: 1px solid color-mix(in srgb, var(--history-border) 78%, transparent);
-  }
-
-  .history-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-
-    > span {
-      min-width: 0;
-      color: var(--history-text-muted);
-      font-size: 12px;
-      line-height: 1.5;
+    &.error {
+      color: var(--danger);
     }
   }
 
   .history-layout {
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
-    height: min(470px, max(320px, calc(100vh - 205px)));
-    height: min(470px, max(320px, calc(100dvh - 205px)));
-    min-height: 320px;
-    border: 1px solid var(--history-border);
+    grid-template-columns: 18rem minmax(0, 1fr);
+    height: min(30rem, calc(100vh - 16rem));
+    border: 1px solid var(--k-color-border);
     border-radius: 8px;
     overflow: hidden;
-    background: var(--history-surface);
-  }
-
-  .history-sidebar {
-    min-width: 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-right: 1px solid var(--history-border);
-    background: color-mix(in srgb, var(--history-muted) 62%, var(--history-surface));
-  }
-
-  .list-heading {
-    flex: 0 0 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    border-bottom: 1px solid color-mix(in srgb, var(--history-border) 72%, transparent);
-    color: var(--history-text-muted);
-    font-size: 11px;
-    font-weight: 600;
-
-    span:last-child {
-      min-width: 22px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--history-primary) 10%, var(--history-surface));
-      color: var(--history-primary);
-      text-align: center;
-    }
   }
 
   .history-list {
-    min-width: 0;
     min-height: 0;
-    flex: 1 1 auto;
     overflow-y: auto;
+    border-right: 1px solid var(--k-color-border);
   }
 
   .history-row {
+    display: block;
     width: 100%;
-    min-height: 82px;
-    display: grid;
-    grid-template-columns: 9px minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 10px;
-    padding: 11px 12px;
     border: 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--history-border) 68%, transparent);
-    border-radius: 0;
-    color: var(--history-text);
+    border-bottom: 1px solid var(--k-color-divider);
+    padding: 0.625rem 0.875rem;
+    color: var(--fg1);
     background: transparent;
+    font: inherit;
     text-align: left;
     cursor: pointer;
 
-    > .status-dot {
-      margin-top: 4px;
-    }
-
-    &:hover,
-    &:focus-visible {
-      background: color-mix(in srgb, var(--history-primary) 7%, var(--history-surface));
-      outline: none;
+    &:hover {
+      background: var(--k-hover-bg);
     }
 
     &.active {
-      background: color-mix(in srgb, var(--history-primary) 11%, var(--history-surface));
-      box-shadow: inset 3px 0 var(--history-primary);
+      background: color-mix(in srgb, var(--k-color-primary) 10%, transparent);
     }
   }
 
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--history-text-muted);
-    flex: 0 0 auto;
-
-    &.running { background: var(--history-primary); }
-    &.success { background: var(--history-success); }
-    &.error { background: var(--history-danger); }
-  }
-
   .row-main {
+    display: grid;
+    gap: 0.125rem;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
   }
 
   .row-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+
+  .row-packages,
+  .row-meta {
     overflow: hidden;
+    color: var(--fg3);
+    font-size: 0.8125rem;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.35;
   }
 
   .row-packages {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--history-text-muted);
-    font-size: 11px;
-    line-height: 1.4;
+    color: var(--fg2);
   }
 
-  .row-meta {
-    color: var(--history-text-muted);
-    font-size: 11px;
-  }
+  .status-tag {
+    flex: 0 0 auto;
+    border-radius: 4px;
+    padding: 0 0.375rem;
+    color: var(--fg2);
+    background: var(--k-side-bg);
+    font-size: 0.75rem;
+    font-weight: normal;
+    line-height: 1.25rem;
 
-  .status-label {
-    font-size: 11px;
-    color: var(--history-text-muted);
-    white-space: nowrap;
-    line-height: 1.35;
+    &.success {
+      color: var(--k-color-success);
+      background: color-mix(in srgb, var(--k-color-success) 12%, transparent);
+    }
 
-    &.running { color: var(--history-primary); }
-    &.success { color: var(--history-success); }
-    &.error { color: var(--history-danger); }
+    &.error {
+      color: var(--danger);
+      background: color-mix(in srgb, var(--danger) 12%, transparent);
+    }
+
+    &.running {
+      color: var(--k-color-primary);
+      background: color-mix(in srgb, var(--k-color-primary) 12%, transparent);
+    }
   }
 
   .history-detail {
     min-width: 0;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
-    padding: 18px;
-    overflow: hidden;
+    overflow-y: auto;
+    padding: 1rem 1.25rem;
   }
 
   .detail-header {
-    flex: 0 0 auto;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-
-  .detail-title {
-    min-width: 0;
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 3px;
+    gap: 1rem;
 
     h3 {
-      max-width: 100%;
-      margin: 1px 0 0;
-      overflow: hidden;
-      color: var(--history-text);
-      font-size: 16px;
-      font-weight: 650;
-      line-height: 1.35;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+      font-size: 1rem;
     }
 
     p {
-      margin: 0;
-      color: var(--history-text-muted);
-      font-size: 11px;
-      line-height: 1.45;
+      margin: 0.25rem 0 0;
+      color: var(--fg3);
+      font-size: 0.8125rem;
     }
-  }
-
-  .detail-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .detail-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
   }
 
   .detail-meta {
-    flex: 0 0 auto;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0 0 12px;
-    border-radius: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2rem;
+    margin: 1rem 0;
 
-    > div {
-      min-width: 0;
+    div {
       display: flex;
-      flex-direction: column;
-      gap: 3px;
-      padding: 8px 10px;
-      border: 1px solid color-mix(in srgb, var(--history-border) 78%, transparent);
-      border-radius: 6px;
-      background: color-mix(in srgb, var(--history-muted) 46%, var(--history-surface));
+      gap: 0.5rem;
+      min-width: 0;
     }
 
     dt {
-      color: var(--history-text-muted);
-      font-size: 11px;
+      color: var(--fg3);
     }
 
     dd {
-      min-width: 0;
       margin: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: var(--history-text);
-      font-size: 12px;
-      font-weight: 600;
-    }
-  }
-
-  .versions-section {
-    min-height: 0;
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 12px;
-  }
-
-  .section-heading {
-    flex: 0 0 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    color: var(--history-text-muted);
-    font-size: 11px;
-    font-weight: 600;
-
-    span:last-child {
-      font-weight: 400;
+      overflow-wrap: anywhere;
     }
   }
 
   .change-list {
-    min-height: 0;
-    flex: 1 1 auto;
-    max-height: none;
-    overflow-y: auto;
-    border: 1px solid color-mix(in srgb, var(--history-border) 82%, transparent);
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--history-muted) 34%, var(--history-surface));
+    border: 1px solid var(--k-color-border);
+    border-radius: 8px;
+    overflow: hidden;
   }
 
   .change-row {
-    display: grid;
-    grid-template-columns: minmax(150px, 1fr) minmax(90px, 128px) 16px minmax(90px, 128px);
-    align-items: center;
-    gap: 8px;
-    min-height: 34px;
-    padding: 5px 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--history-border) 64%, transparent);
-    font-size: 11px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin-top: -1px;
+    border-top: 1px solid var(--k-color-divider);
+    padding: 0.5rem 0.875rem;
 
-    &:last-child { border-bottom: 0; }
     strong {
       min-width: 0;
-      overflow: hidden;
-      color: var(--history-text);
-      font-weight: 600;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      font-weight: 500;
+      overflow-wrap: anywhere;
     }
   }
 
-  .version-value {
-    min-width: 0;
+  .change-versions {
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
-    color: var(--history-text-muted);
-    font-family: Consolas, Monaco, 'Andale Mono', monospace;
-    text-align: right;
-    white-space: nowrap;
-
-    &.after {
-      color: var(--history-primary);
-    }
-  }
-
-  .version-text {
+    flex-wrap: wrap;
+    gap: 0.375rem;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+    overflow-wrap: anywhere;
+    color: var(--fg2);
+    font-variant-numeric: tabular-nums;
 
-  .version-arrow {
-    color: color-mix(in srgb, var(--history-text-muted) 64%, transparent);
-    text-align: center;
+    .version-arrow {
+      color: var(--fg3);
+    }
+
+    .after {
+      color: var(--fg1);
+      font-weight: 600;
+    }
   }
 
   .truncated-note {
-    flex: 0 0 auto;
-    margin: 0 0 8px;
-    padding: 7px 9px;
-    border-radius: 6px;
-    color: var(--history-text-muted);
-    background: color-mix(in srgb, var(--history-warning) 8%, var(--history-surface));
-    border: 1px solid color-mix(in srgb, var(--history-warning) 28%, var(--history-border));
-    font-size: 11px;
-    line-height: 1.5;
+    margin: 0.75rem 0 0;
+    color: var(--fg3);
+    font-size: 0.8125rem;
   }
 
-  .history-state {
-    margin: auto;
-    padding: 24px;
-    color: var(--history-text-muted);
-    font-size: 13px;
-    text-align: center;
-
-    &.error { color: var(--history-danger); }
-  }
-
-  &.market-mode-polished {
-    border-color: color-mix(in srgb, var(--history-primary) 16%, var(--history-border));
-    box-shadow: 0 18px 46px color-mix(in srgb, var(--history-text) 16%, transparent);
-
-    .history-layout {
-      border-color: color-mix(in srgb, var(--history-primary) 12%, var(--history-border));
-    }
-
-    .history-row.active {
-      background: color-mix(in srgb, var(--history-primary) 13%, var(--history-surface));
-    }
+  .history-refresh {
+    margin-right: auto;
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .install-history-dialog {
-    .el-dialog__header { padding: 12px 44px 10px 14px; }
-
-    .el-dialog__body {
-      padding: 10px;
-    }
-
-    .history-toolbar {
-      align-items: flex-start;
-      flex-wrap: wrap;
-
-      > span { flex: 1 1 9rem; min-width: 0; }
-      .el-button { margin-left: auto; }
-    }
-
     .history-layout {
       grid-template-columns: 1fr;
-      grid-template-rows: 132px minmax(0, 1fr);
-      height: min(540px, max(300px, calc(100vh - 180px)));
-      height: min(540px, max(300px, calc(100dvh - 180px)));
-      min-height: 300px;
-      overflow: hidden;
+      grid-template-rows: auto auto;
+      height: auto;
     }
 
-    .history-sidebar {
-      contain: none;
+    .history-list {
+      max-height: 14rem;
       border-right: 0;
-      border-bottom: 1px solid var(--history-border);
+      border-bottom: 1px solid var(--k-color-border);
     }
 
     .history-detail {
-      padding: 10px;
-      overflow: hidden;
+      overflow: visible;
+      padding: 0.875rem;
     }
-
-    .history-row {
-      min-height: 64px;
-      padding: 8px 10px;
-      gap: 7px;
-
-      .row-title { font-size: 12px; }
-      .row-packages,
-      .row-meta,
-      .status-label { font-size: 10px; }
-    }
-
-    .list-heading { flex-basis: 36px; }
-
-    .detail-title h3 { font-size: 14px; }
-
-    .detail-meta {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 6px;
-      margin-bottom: 8px;
-
-      > div { padding: 6px 8px; }
-      dt, dd { font-size: 10px; }
-    }
-
-    .section-heading { flex-basis: 26px; }
-
-    .el-dialog__footer {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-
-      .el-button { flex: 1 1 8rem; margin-left: 0; }
-    }
-
-    .detail-header {
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }
-
-    .detail-actions {
-      width: 100%;
-      justify-content: flex-start;
-    }
-
-    .change-row {
-      grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr);
-      gap: 4px;
-      padding-block: 7px;
-
-      strong {
-        grid-column: 1 / -1;
-      }
-
-      .version-value.after {
-        text-align: left;
-        justify-content: flex-start;
-      }
-    }
-  }
-}
-
-@media (max-width: 420px) {
-  .install-history-dialog {
-    .history-layout { grid-template-rows: 118px minmax(0, 1fr); }
-    .detail-meta { grid-template-columns: 1fr; }
-    .history-row { grid-template-columns: 8px minmax(0, 1fr); }
-    .history-row > .status-label { display: none; }
   }
 }
 </style>

@@ -42,7 +42,7 @@
     <p>{{ t('extensions.messages.externalLocal') }}</p>
   </k-comment>
 
-  <el-dialog v-model="showUninstallDialog" class="market-extension-uninstall-dialog" :title="t('operations.install.uninstall')" destroy-on-close>
+  <el-dialog v-model="showUninstallDialog" class="market-dialog market-extension-uninstall-dialog" :title="t('operations.install.uninstall')" width="520px" destroy-on-close>
     {{ t('extensions.messages.configQuestion') }}
     <template #footer>
       <el-button @click="showUninstallDialog = false">{{ t('extensions.actions.cancel') }}</el-button>
