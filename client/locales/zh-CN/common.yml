@@ -48,24 +48,9 @@ status:
   failed: 失败
   unknown: 状态未知
 labels:
-  current: 当前
-  target: 目标
-  latest: 最新
-  version: 版本
   range: 范围
-  type: 类型
-  config: 配置
   source: 来源
   versionSource: 版本源
-  name: 名称
-  installed: 已安装
-  operation: 操作
-  unknown: 未知
-  notInstalled: 未安装
-  workspace: 工作区
-  packageBundle: 插件包
-  package: 插件
-  dependency: 依赖
 time:
   seconds: '{count} 秒'
   minutes: '{count} 分'

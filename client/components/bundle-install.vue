@@ -344,6 +344,7 @@ import {
 } from '../../src/shared/bundle'
 import {
   activeBundle,
+  formatShortname,
   getBundleMemberConfigState,
   installProgressState,
   prepareInstallFallbackRetry,
@@ -397,15 +398,6 @@ function memberCategory(name: string) {
   return resolveCategory(data?.category)
 }
 
-function formatShortname(name: string) {
-  const shortname = getMarketObject(name)?.shortname
-  if (shortname && shortname !== name) return shortname
-  if (name.startsWith('@koishijs/plugin-')) return name.slice('@koishijs/plugin-'.length)
-  if (name.startsWith('koishi-plugin-')) return name.slice('koishi-plugin-'.length)
-  const scoped = name.match(/^@([^/]+)\/koishi-plugin-(.+)$/)
-  if (scoped) return `@${scoped[1]}/${scoped[2]}`
-  return name
-}
 const installList = computed(() => {
   if (!activeBundle.value) return []
   return [

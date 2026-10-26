@@ -167,7 +167,7 @@ export function setupActions(ctx: Context) {
     label: () => translate('common.actions.manual'),
   }, {
     id: '.history',
-    icon: 'info-full',
+    icon: 'clipboard-list',
     label: () => translate('common.actions.history'),
   }, {
     id: '.versions',

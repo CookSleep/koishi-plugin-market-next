@@ -48,24 +48,9 @@ status:
   failed: Failed
   unknown: Unknown status
 labels:
-  current: Current
-  target: Target
-  latest: Latest
-  version: Version
   range: Range
-  type: Type
-  config: Config
   source: Source
   versionSource: Version source
-  name: Name
-  installed: Installed
-  operation: Operation
-  unknown: Unknown
-  notInstalled: Not installed
-  workspace: Workspace
-  packageBundle: Plugin bundle
-  package: Plugin
-  dependency: Dependency
 time:
   seconds: '{count} sec'
   minutes: '{count} min'

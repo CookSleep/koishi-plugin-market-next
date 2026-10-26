@@ -5,6 +5,7 @@ import { compare, satisfies } from 'semver'
 import { reactive, ref, watch } from 'vue'
 import { active } from '../utils'
 import { translate } from '../i18n'
+import { getMarketObject } from '../market/state'
 import {
   getBundleGroupIdent,
   getPluginShortname,
@@ -20,6 +21,15 @@ export interface ClientConfigWriter {
   get(name: string): any[] | undefined
   ensure(name: string, silent?: boolean): void
   remove(name: string): void
+}
+
+export function formatShortname(name: string) {
+  const shortname = getMarketObject(name)?.shortname
+  if (shortname && shortname !== name) return shortname
+  if (name.startsWith('@koishijs/plugin-')) return name.slice('@koishijs/plugin-'.length)
+  if (name.startsWith('koishi-plugin-')) return name.slice('koishi-plugin-'.length)
+  const scoped = name.match(/^@([^/]+)\/koishi-plugin-(.+)$/)
+  return scoped ? `@${scoped[1]}/${scoped[2]}` : name
 }
 
 export function getConfigWriter(ctx: Context) {
@@ -100,7 +110,7 @@ export function getRegistryStatusText(name: string) {
   }
 }
 
-function formatEndpoint(endpoint: string) {
+export function formatEndpoint(endpoint: string) {
   try {
     return new URL(endpoint).host
   } catch {
