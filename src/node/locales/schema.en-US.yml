@@ -1,25 +1,25 @@
 registry:
-  $description: Registry settings
-  endpoint: Package download source. Follows the current project's npm config by default.
-  timeout: Timeout for fetching package metadata.
-  autoRoute: Automatically try fallback npm registries when version metadata cannot be fetched from the current registry.
-  retry: Retry count after version metadata fails on each npm registry.
-  concurrency: Maximum concurrency when loading dependency version metadata.
-  installLogRetentionHours: How many hours dependency operation logs are retained. Defaults to 72 hours.
+  $description: npm Registry
+  endpoint: npm registry used to install plugins. Leave empty to follow the npm config of the current project.
+  timeout: Timeout of a single version lookup, in milliseconds.
+  autoRoute: Try fallback registries when the current one fails to return version info.
+  retry: How many times to retry each registry after a failure.
+  concurrency: How many dependencies to look up at the same time.
+  installLogRetentionHours: How many hours to keep install, update and uninstall logs.
 search:
-  $description: Search settings
-  endpoint: URL used to search the plugin market. Uses the t4wefan mirror by default.
-  timeout: Timeout for searching the plugin market.
-  proxyAgent: Proxy used to search the plugin market.
-  autoRoute: Automatically try fallback market sources when the current source fails.
+  $description: Plugin Market Source
+  endpoint: URL of the plugin market index. Uses the t4wefan mirror by default.
+  timeout: Timeout for fetching the market index, in milliseconds.
+  proxyAgent: Proxy used only for fetching the market index.
+  autoRoute: Try fallback sources when the current market source fails or is clearly too slow.
   logLevel: Plugin market log level (legacy setting).
 
-logLevel: Log level for market and package operations. silent disables logs; debug enables detailed logs.
+logLevel: Log level. silent prints nothing; debug is the most detailed.
 marketSilentFilters: Legacy permanent silent filters.
-idleProbe: Automatically probes dependency versions and market data while Console is idle. It only runs when no browser console is connected, and page reloads do not trigger it.
-idleProbeDelay: How long Console must stay idle before the background probe starts.
-idleProbeBootDelay: Minimum delay after Koishi startup or reload before idle probing is allowed.
-idleProbeInterval: Minimum interval between idle background probes.
+idleProbe: Check dependencies and the plugin market for updates in the background while nobody has the console open. It only refreshes data and never installs anything.
+idleProbeDelay: How long the console must be unattended before a background check starts, in milliseconds (default 5 minutes).
+idleProbeBootDelay: Minimum wait after Koishi starts or reloads before background checks are allowed, in milliseconds (default 1 minute).
+idleProbeInterval: Minimum interval between two background checks, in milliseconds (default 6 hours).
 bulkMode: Batch operation mode. Dependency install, update, and uninstall actions are staged until applying changes.
 removeConfig:
   $description: Whether to remove existing plugin config when uninstalling a plugin. Ask every time when unset.
@@ -31,18 +31,18 @@ updateIgnoredPackages: Dependency package names that should not be checked for u
 updateIgnoreDuration: Default duration after ignoring one update. 0 means no time-based expiry.
 updateIgnoreVersions: How many consecutive newer versions should be ignored after ignoring one update. 1 means only the current latest version.
 updateIgnorePrerelease: When enabled, alpha / beta / rc and other prerelease versions are not treated as update targets.
-chatlunaTool: Enable the ChatLuna plugin market query tool. ChatLuna must be installed and enabled separately; when available, this registers the read-only koishi_plugin_market_search tool. Other market features work without ChatLuna.
+chatlunaTool: Register a read-only plugin market query tool (koishi_plugin_market_search) for ChatLuna. ChatLuna must be installed and enabled separately; other features work without it.
 
 frontendMode:
-  $description: Frontend display mode. Performance mode keeps low-motion dense UI; polished mode enables richer visual effects.
+  $description: Display style of the plugin market page. Polished mode adds more animation and background decoration.
   $inner:
     - Performance mode
     - Polished mode
 depsLayout:
-  $description: Dependencies page layout. Grid shows compact cards; list shows a denser single-column view.
+  $description: Default view of the Dependencies page. You can also switch it at any time in the top-right corner of the page.
   $inner:
-    - Grid
-    - List
+    - Card view
+    - List view
 marketSilentRules:
   $description: Permanent silent market filters. Matched plugins are hidden from the market page.
   type:

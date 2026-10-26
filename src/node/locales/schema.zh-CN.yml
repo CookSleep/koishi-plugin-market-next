@@ -1,26 +1,26 @@
 registry:
-  $description: 插件源设置
-  endpoint: 插件的下载源。默认跟随当前项目的 npm config。
-  timeout: 获取插件数据的超时时间。
-  autoRoute: 当前下载源获取版本失败时自动尝试备用 npm 源。
-  retry: 每个 npm 源获取版本失败后的重试次数。
-  concurrency: 批量获取依赖版本时的最大并发数。
-  installLogRetentionHours: 依赖安装、更新与卸载操作日志保留多少小时，默认 72 小时。
+  $description: npm 源
+  endpoint: 安装插件时使用的 npm 源。留空则沿用当前项目的 npm 配置。
+  timeout: 单次获取版本信息的超时时间，单位为毫秒。
+  autoRoute: 当前 npm 源获取版本失败时，自动尝试备用源。
+  retry: 每个 npm 源获取失败后重试几次。
+  concurrency: 同时获取多少个依赖的版本信息。
+  installLogRetentionHours: 安装、更新和卸载的日志保留多少小时。
 
 search:
-  $description: 搜索设置
-  endpoint: 用于搜索插件市场的网址。默认使用 t4wefan 镜像。
-  timeout: 搜索插件市场的超时时间。
-  proxyAgent: 用于搜索插件市场的代理。
-  autoRoute: 当前市场源失败时自动尝试备用市场源。
+  $description: 插件市场源
+  endpoint: 插件市场索引的地址，默认使用 t4wefan 镜像。
+  timeout: 拉取插件市场索引的超时时间，单位为毫秒。
+  proxyAgent: 只用于拉取插件市场索引的代理地址。
+  autoRoute: 当前市场源失败或明显过慢时，自动尝试备用源。
   logLevel: 插件市场调试日志级别（兼容旧版设置）。
 
-logLevel: 插件市场与依赖操作日志级别。silent 关闭日志，debug 输出最详细。
+logLevel: 日志级别。silent 不输出，debug 最详细。
 marketSilentFilters: 旧版永久静默过滤。
-idleProbe: Console 空闲时自动探测依赖版本和插件市场数据。仅在没有浏览器控制台连接时运行，不会因为刷新页面触发。
-idleProbeDelay: Console 无人在线多久后开始后台探测。
-idleProbeBootDelay: Koishi 启动或重载后，至少等待多久才允许空闲探测。
-idleProbeInterval: 两次空闲后台探测之间的最小间隔。
+idleProbe: 没有人打开控制台时，在后台检查依赖和插件市场有没有更新。只更新数据，不会安装任何东西。
+idleProbeDelay: 控制台没人在线多久后开始后台检查，单位为毫秒（默认 5 分钟）。
+idleProbeBootDelay: Koishi 启动或重载后，至少等待多久才开始后台检查，单位为毫秒（默认 1 分钟）。
+idleProbeInterval: 两次后台检查之间至少间隔多久，单位为毫秒（默认 6 小时）。
 bulkMode: 批量操作模式。开启后安装、更新、卸载会先暂存，点击“应用更改”后执行。
 removeConfig:
   $description: 卸载插件时是否同时删除已有插件配置。未设置时每次询问。
@@ -32,18 +32,18 @@ updateIgnoredPackages: 不检测更新的依赖名。每行一个包名，也可
 updateIgnoreDuration: 点击“忽略此次更新”后的默认忽略时长。0 表示不按时间过期。
 updateIgnoreVersions: 点击“忽略此次更新”后连续忽略几个新版本。1 表示只忽略当前最新版本。
 updateIgnorePrerelease: 手动开启后，alpha / beta / rc 等预发布版本不会被视为可更新版本。
-chatlunaTool: 启用 ChatLuna 插件市场查询工具。此功能需要另行安装并启用 ChatLuna；满足条件后会注册只读工具 koishi_plugin_market_search。未安装 ChatLuna 不影响插件市场的其他功能。
+chatlunaTool: 给 ChatLuna 注册一个只读的插件市场查询工具（koishi_plugin_market_search）。需要另外安装并启用 ChatLuna；不开启也不影响其他功能。
 
 frontendMode:
-  $description: 前端显示模式。性能模式保持低动效；精致模式启用更细腻的动效和高级样式。
+  $description: 插件市场页的显示风格。精致模式会加上更多动效和背景装饰。
   $inner:
     - 性能模式
     - 精致模式
 depsLayout:
-  $description: 依赖管理页布局。网格模式多列展示；列表模式单列宽卡片，信息更密集。
+  $description: 依赖管理页默认使用的视图，也可以在页面右上角随时切换。
   $inner:
-    - 网格
-    - 列表
+    - 卡片视图
+    - 列表视图
 marketSilentRules:
   $description: 插件市场永久静默过滤。添加后命中的插件会直接隐藏，不会显示在搜索框中。
   type:
