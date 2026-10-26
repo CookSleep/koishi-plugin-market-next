@@ -53,7 +53,7 @@
           </header>
 
           <dl class="detail-meta">
-            <div><dt>{{ t('operations.history.source') }}</dt><dd :title="detail.installEndpoint">{{ formatEndpoint(detail.installEndpoint) }}</dd></div>
+            <div><dt>{{ t('operations.history.source') }}</dt><dd :title="detail.installEndpoint">{{ detail.installEndpoint ? formatEndpoint(detail.installEndpoint) : t('operations.history.defaultSource') }}</dd></div>
             <div><dt>{{ t('operations.history.logSize') }}</dt><dd>{{ formatSize(detail.size) }}</dd></div>
           </dl>
 
@@ -84,7 +84,7 @@
 import { computed, ref, watch } from 'vue'
 import { message, send } from '@koishijs/client'
 import type { InstallHistoryChange, InstallHistoryEntry, InstallLogDetail } from 'koishi-plugin-market-next'
-import { showInstallHistory } from './utils'
+import { formatEndpoint, showInstallHistory } from './utils'
 import { useMarketNextI18n } from '../i18n'
 
 const { t, locale } = useMarketNextI18n()
@@ -220,15 +220,6 @@ function formatDuration(value: number) {
   const minutes = Math.floor(value / 60000)
   const seconds = Math.round(value % 60000 / 1000)
   return t('common.time.minutesSeconds', { minutes, seconds })
-}
-
-function formatEndpoint(endpoint?: string) {
-  if (!endpoint) return t('operations.history.defaultSource')
-  try {
-    return new URL(endpoint).host
-  } catch {
-    return endpoint
-  }
 }
 
 function formatSize(value: number) {

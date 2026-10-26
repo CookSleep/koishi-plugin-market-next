@@ -129,14 +129,6 @@ const searchInput = ref<{ focus?: () => void }>()
 const depsLayout = computed(() => getDepsLayout(config.value))
 const modeClass = computed(() => `market-mode-${getFrontendMode(config.value)}`)
 
-function getOverride() {
-  return getPendingOverrides()
-}
-
-function getUpdatePolicy() {
-  return getMarketNextPolicy(config.value)
-}
-
 function isManageableBundle(name: string) {
   return !!(getBundleRecords(config.value)[name] || createLocalBundleRecord(name))
 }
@@ -145,7 +137,7 @@ const names = computed(() => {
   const configWriter = getConfigWriter(ctx)
   const explicit: Record<string, unknown> = {
     ...(store.dependencies ?? {}),
-    ...getOverride(),
+    ...getPendingOverrides(),
   }
   for (const name of Object.keys(store.packages ?? {})) {
     const pkg = store.packages?.[name]
@@ -204,19 +196,17 @@ function onSearchShortcut(event: KeyboardEvent) {
 
 function classify(name: string, configWriter?: ClientConfigWriter): ItemKind {
   const dep = store.dependencies?.[name]
-  const override = getOverride()
-  const pending = Object.prototype.hasOwnProperty.call(override, name)
-  if (pending) return 'pending'
+  if (Object.prototype.hasOwnProperty.call(getPendingOverrides(), name)) return 'pending'
   if (!dep) return store.packages?.[name] ? 'local' : 'manual'
   if (dep.local || dep.workspace) return 'local'
   if (dep.invalid) return 'invalid'
   if (isManageableBundle(name)) return 'bundle'
   if (isUnconfigured(name, configWriter)) return 'unconfigured'
-  const status = getRegistryStatus(name)
-  if (status?.error) return 'error'
-  if (isUpdateCheckDisabled(name, getUpdatePolicy())) return 'check-disabled'
-  if (isUpdateIgnored(name, getUpdatePolicy())) return 'ignored'
-  if (hasUpdate(name, getUpdatePolicy())) return 'updatable'
+  if (getRegistryStatus(name)?.error) return 'error'
+  const policy = getMarketNextPolicy(config.value)
+  if (isUpdateCheckDisabled(name, policy)) return 'check-disabled'
+  if (isUpdateIgnored(name, policy)) return 'ignored'
+  if (hasUpdate(name, policy)) return 'updatable'
   return 'installed'
 }
 
@@ -230,19 +220,19 @@ const items = computed<DependencyItem[]>(() => {
   return names.value.map(name => ({
     name,
     kind: classify(name, configWriter),
-    pending: Object.prototype.hasOwnProperty.call(getOverride(), name),
+    pending: Object.prototype.hasOwnProperty.call(getPendingOverrides(), name),
     manual: !store.dependencies?.[name] && !store.packages?.[name],
   }))
 })
 
 const updates = computed(() => items.value.filter(item => item.kind === 'updatable').map(item => item.name))
 
-const prereleaseBlocked = computed(() => !!getUpdatePolicy().updateIgnorePrerelease)
+const prereleaseBlocked = computed(() => !!getMarketNextPolicy(config.value).updateIgnorePrerelease)
 
 const summary = computed(() => {
   const counts: Record<string, number> = {
     all: items.value.length,
-    pending: Object.keys(getOverride()).length,
+    pending: Object.keys(getPendingOverrides()).length,
     manual: items.value.filter(item => item.manual).length,
   }
   for (const item of items.value) {
@@ -279,13 +269,9 @@ const groupMeta = computed(() => Object.fromEntries(groupOrder.map(key => {
 
 const collapseEnabled = computed(() => filter.value === 'all' && !keyword.value.trim())
 
-function getDefaultCollapsed(key: ItemKind) {
-  return key === 'unconfigured' || key === 'ignored'
-}
-
 function isGroupCollapsed(key: ItemKind) {
   if (!collapseEnabled.value) return false
-  return getCollapsedGroups()[key] ?? getDefaultCollapsed(key)
+  return getCollapsedGroups()[key] ?? (key === 'unconfigured' || key === 'ignored')
 }
 
 function toggleGroup(key: ItemKind) {
@@ -353,7 +339,7 @@ ctx.action('dependencies.upgrade', {
   disabled: () => !updates.value.length,
   async action() {
     for (const name of updates.value) {
-      const version = getLatestVersion(name, getUpdatePolicy())
+      const version = getLatestVersion(name, getMarketNextPolicy(config.value))
       if (!version) continue
       getPendingOverrides()[name] = version
     }
