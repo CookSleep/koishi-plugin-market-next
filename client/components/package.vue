@@ -6,10 +6,14 @@
 
     <div class="dep-main">
       <div class="dep-title">
-        <h3 :title="name">{{ displayName }}</h3>
+        <h3 :title="name">
+          <a v-if="titleLink" :href="titleLink" :title="titleLink" target="_blank" rel="noopener noreferrer">{{ displayName }}</a>
+          <template v-else>{{ displayName }}</template>
+        </h3>
         <span v-if="showTag" :class="['dep-tag', `is-${statusClass}`]">{{ statusLabel }}</span>
       </div>
-      <span v-if="displayName !== name" class="dep-name" :title="name">{{ name }}</span>
+      <a v-if="displayName !== name && npmLink" class="dep-name" :href="npmLink" :title="npmLink" target="_blank" rel="noopener noreferrer">{{ name }}</a>
+      <span v-else-if="displayName !== name" class="dep-name" :title="name">{{ name }}</span>
       <!-- Rendered even when empty so every card has the same height. -->
       <p v-if="!listMode" class="dep-summary" :title="summaryText">{{ summaryText }}</p>
     </div>
@@ -209,6 +213,27 @@ const localDependency = computed(() => {
 const bundleRecord = computed(() => getBundleRecords(config.value)[props.name] || createLocalBundleRecord(props.name))
 
 const displayName = computed(() => formatShortname(props.name))
+
+// The plugin name opens its homepage and the package name opens npm. Local and workspace
+// packages may differ from the published one, so they get neither link.
+const published = computed(() => !localDependency.value && !dep.value?.workspace && !local.value?.workspace)
+const marketLinks = computed(() => getMarketObject(props.name)?.package?.links)
+
+const homepageLink = computed(() => {
+  if (!published.value) return
+  const { homepage, repository } = marketLinks.value ?? {}
+  const url = [homepage, repository].find(url => /^(git\+)?https?:\/\//.test(url ?? ''))
+  return url?.replace(/^git\+/, '').replace(/\.git$/, '')
+})
+
+const npmLink = computed(() => {
+  if (!published.value || !marketLinks.value && !store.registry?.[props.name]) return
+  const url = marketLinks.value?.npm
+  return url && /^https?:\/\//.test(url) ? url : `https://www.npmjs.com/package/${props.name}`
+})
+
+// Without a separate package name line, the title falls back to npm.
+const titleLink = computed(() => homepageLink.value || (displayName.value === props.name ? npmLink.value : undefined))
 
 const icon = computed(() => {
   if (isBundlePackageName(props.name)) return 'layer-group'
@@ -682,7 +707,18 @@ async function configure() {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
   }
+}
+
+.dep-title h3 a:hover,
+a.dep-name:hover {
+  color: var(--k-color-primary);
+  text-decoration: underline;
 }
 
 .dep-tag {
@@ -721,6 +757,9 @@ async function configure() {
 
 .dep-name {
   display: block;
+  width: fit-content;
+  max-width: 100%;
+  text-decoration: none;
   color: var(--fg3);
   font-size: 0.8125rem;
   line-height: 1.4;
