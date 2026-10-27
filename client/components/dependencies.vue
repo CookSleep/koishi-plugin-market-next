@@ -16,7 +16,14 @@
           :key="option.value"
           :value="option.value"
           :label="option.count ? `${option.label} (${option.count})` : option.label"
-        ></el-option>
+        >
+          <span class="deps-filter-option">
+            <k-icon v-if="option.icon.startsWith('market-next:')" :name="option.icon"></k-icon>
+            <market-icon v-else :name="option.icon"></market-icon>
+            <span>{{ option.label }}</span>
+            <span v-if="option.count" class="deps-filter-count">{{ option.count }}</span>
+          </span>
+        </el-option>
       </el-select>
       <el-checkbox :model-value="prereleaseBlocked" @change="togglePrereleaseFilter">
         {{ t('dependencies.toolbar.blockPreview') }}
@@ -70,7 +77,7 @@
             </div>
           </section>
         </template>
-        <k-empty v-else>{{ t('dependencies.empty') }}</k-empty>
+        <empty-state v-else class="deps-empty" icon="market-next:search-empty" :title="t('dependencies.empty')" :description="t('dependencies.emptyHint')"></empty-state>
       </div>
     </el-scrollbar>
 
@@ -98,6 +105,8 @@ import { getBundleRecords, getCollapsedGroups, getFrontendMode, getDepsLayout, g
 import { addManual, createLocalBundleRecord, getConfigWriter, getRegistryStatus, pendingBundleUninstalls, showConfirm, type ClientConfigWriter } from './utils'
 import ManualInstall from './manual.vue'
 import PackageView from './package.vue'
+import EmptyState from './empty-state.vue'
+import MarketIcon from '../market/icons'
 import { PLUGIN_PACKAGE_RE } from '../../src/shared/bundle'
 import { shouldIncludeDiscoveredLocalPlugin } from '../../src/shared/dependency-source'
 import { loadMarketObjects } from '../market/state'
@@ -244,24 +253,24 @@ const summary = computed(() => {
   return counts
 })
 
-const filterKeys: Record<FilterKey, string> = {
-  all: 'all',
-  pending: 'pending',
-  bundle: 'bundle',
-  unconfigured: 'unconfigured',
-  updatable: 'updatable',
-  ignored: 'ignored',
-  'check-disabled': 'checkDisabled',
-  invalid: 'invalid',
-  error: 'error',
-  local: 'local',
-  manual: 'manual',
+const filterKeys: Record<FilterKey, [string, string]> = {
+  all: ['all', 'solid:all'],
+  pending: ['pending', 'tag'],
+  bundle: ['bundle', 'file-archive'],
+  unconfigured: ['unconfigured', 'preview'],
+  updatable: ['updatable', 'asc'],
+  ignored: ['ignored', 'market-next:bell-off'],
+  'check-disabled': ['checkDisabled', 'close'],
+  invalid: ['invalid', 'balance'],
+  error: ['error', 'insecure'],
+  local: ['local', 'portable'],
+  manual: ['manual', 'search'],
 }
 
 // Empty categories are hidden so the dropdown only offers useful choices.
 const filterOptions = computed(() => (Object.keys(filterKeys) as FilterKey[])
   .filter(value => value === 'all' || value === filter.value || summary.value[value])
-  .map(value => ({ value, label: t(`dependencies.filters.${filterKeys[value]}`), count: summary.value[value] })))
+  .map(value => ({ value, label: t(`dependencies.filters.${filterKeys[value][0]}`), icon: filterKeys[value][1], count: summary.value[value] })))
 
 const groupOrder: ItemKind[] = ['pending', 'bundle', 'unconfigured', 'updatable', 'ignored', 'check-disabled', 'invalid', 'error', 'local', 'manual', 'installed']
 
@@ -363,10 +372,6 @@ ctx.action('dependencies.upgrade', {
     flex: 1 1 auto;
     min-height: 0;
   }
-
-  .k-empty {
-    margin-top: 4rem;
-  }
 }
 
 .deps-toolbar {
@@ -391,6 +396,30 @@ ctx.action('dependencies.upgrade', {
 
 .deps-filter-select {
   flex: 0 0 10rem;
+}
+
+.deps-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .market-icon,
+  .k-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--fg3);
+  }
+}
+
+.deps-filter-count {
+  margin-left: auto;
+  padding-left: 1rem;
+  color: var(--fg3);
+  font-size: 0.8125rem;
+}
+
+.deps-empty {
+  margin-top: 3rem;
 }
 
 .deps-loading {

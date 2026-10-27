@@ -6,7 +6,7 @@
     destroy-on-close
     :class="['market-dialog', 'package-history-dialog']"
     :title="t('operations.timeline.title', { name: packageName })"
-    width="560px"
+    width="520px"
   >
     <div class="package-history-summary">
       <span>{{ t('operations.timeline.current') }}</span>
@@ -19,9 +19,12 @@
     <div v-else-if="error" class="package-history-state error">
       {{ error }}
     </div>
-    <div v-else-if="!entries.length" class="package-history-state">
-      {{ t('operations.timeline.empty') }}
-    </div>
+    <empty-state
+      v-else-if="!entries.length"
+      icon="market-next:history"
+      :title="t('operations.timeline.emptyTitle')"
+      :description="t('operations.timeline.empty')"
+    ></empty-state>
     <div v-else class="package-history-list">
       <button
         v-for="entry in entries"
@@ -73,6 +76,7 @@ import { message, send } from '@koishijs/client'
 import type { InstallPackageHistory, InstallPackageHistoryEntry } from 'koishi-plugin-market-next'
 import { useMarketNextI18n } from '../i18n'
 import MarketIcon from '../market/icons'
+import EmptyState from './empty-state.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -162,7 +166,10 @@ function formatDate(value: number) {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.75rem;
+  border-radius: 8px;
+  padding: 0.625rem 0.875rem;
   color: var(--fg2);
+  background: var(--k-side-bg);
 
   strong {
     min-width: 0;

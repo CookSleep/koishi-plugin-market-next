@@ -129,10 +129,13 @@ progress:
   fallbackConfirmed: 用户确认使用备用 npm 源重试：{endpoint}
   fallbackFailed: 备用 npm 源重试失败，包管理器退出码：{code}
 history:
+  emptyTitle: 还没有操作记录
+  loadFailedTitle: 读取失败
+  logTitle: 包管理器输出
   title: 最近操作
   refresh: 刷新
   reading: 正在读取操作记录……
-  empty: 还没有操作记录。安装、更新或卸载依赖后，会在这里留下日志。
+  empty: 安装、更新或卸载依赖后，完整的包管理器输出会保存在这里，方便排查问题。
   readingLog: 正在读取日志……
   copyLog: 复制日志
   copied: 日志已复制。
@@ -157,11 +160,12 @@ history:
   unknownTime: 时间未知
   defaultSource: 项目默认源
 timeline:
+  emptyTitle: 暂无版本历史
   title: '{name} 版本历史'
   current: 当前版本
   currentBadge: 当前
   loading: 正在读取版本历史……
-  empty: 还没有通过 Market Next 安装或更新过这个依赖。
+  empty: 通过 Market Next 安装或更新过这个依赖之后，每个版本都会记在这里，可以随时切回去。
   loadFailed: 读取版本历史失败，请稍后重试。
   from: 从 {version} 变更
   useVersion: 设为目标版本

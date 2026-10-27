@@ -5,7 +5,8 @@ toolbar:
   listView: List view
   loading: Fetching version info…
   searchPlaceholder: Search dependencies
-empty: No matching dependencies.
+empty: No matching dependencies
+emptyHint: Try another keyword, or set the filter back to “All”.
 apply:
   count: '{count} change(s) to apply'
   description: Confirming writes package.json and starts the installation.

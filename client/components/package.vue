@@ -68,8 +68,11 @@
             :key="item.command"
             :command="item.command"
             :divided="item.danger"
-            :class="{ 'dep-menu-danger': item.danger }"
-          >{{ item.label }}</el-dropdown-item>
+            :class="['dep-menu-item', { 'dep-menu-danger': item.danger }]"
+          >
+            <k-icon :name="item.icon"></k-icon>
+            <span>{{ item.label }}</span>
+          </el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>
@@ -397,17 +400,18 @@ const showConfigure = computed(() => !pending.value && unconfigured.value)
 const showBindLocal = computed(() => !pending.value && dep.value?.source === 'unbound' && dep.value?.bound === false)
 
 const menuItems = computed(() => {
-  const items: { command: string, label: string, danger?: boolean }[] = []
+  const items: { command: string, label: string, icon: string, danger?: boolean }[] = []
   if (!bundlePackage.value && !pending.value && !localDependency.value && data.value && !['error', 'manual'].includes(statusClass.value)) {
-    items.push({ command: 'version', label: editing.value ? t('dependencyCard.actions.hideVersions') : t('dependencyCard.actions.pickVersion') })
+    items.push({ command: 'version', icon: 'market-next:switch', label: editing.value ? t('dependencyCard.actions.hideVersions') : t('dependencyCard.actions.pickVersion') })
   }
   if (dep.value?.resolved && !localDependency.value && !dep.value.invalid) {
-    items.push({ command: 'history', label: t('dependencyCard.actions.history') })
+    items.push({ command: 'history', icon: 'market-next:history', label: t('dependencyCard.actions.history') })
   }
-  if (showQuickUpdate.value) items.push({ command: 'ignore', label: t('dependencyCard.actions.ignore') })
+  if (showQuickUpdate.value) items.push({ command: 'ignore', icon: 'market-next:bell-off', label: t('dependencyCard.actions.ignore') })
   if (!pending.value && dep.value && !dep.value.workspace && !dep.value.invalid) {
     items.push({
       command: 'remove',
+      icon: 'market-next:trash',
       label: bundleRecord.value ? t('dependencyCard.actions.uninstallBundle') : t('dependencyCard.actions.uninstall'),
       danger: true,
     })
@@ -562,8 +566,23 @@ async function configure() {
 
 <style lang="scss">
 
+.dep-menu-item.el-dropdown-menu__item {
+  gap: 0.625rem;
+  min-width: 9rem;
+
+  .k-icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--fg3);
+  }
+}
+
 .dep-menu-danger.el-dropdown-menu__item:not(.is-disabled) {
   color: var(--danger);
+
+  .k-icon {
+    color: inherit;
+  }
 
   &:hover, &:focus {
     color: var(--danger);

@@ -129,10 +129,13 @@ progress:
   fallbackConfirmed: 'User confirmed retry with fallback npm source: {endpoint}'
   fallbackFailed: 'Fallback npm source retry failed. Package manager exit code: {code}'
 history:
+  emptyTitle: No operations yet
+  loadFailedTitle: Failed to load
+  logTitle: Package manager output
   title: Recent operations
   refresh: Refresh
   reading: Reading operation records…
-  empty: No operations yet. Installing, updating or uninstalling dependencies leaves a log here.
+  empty: After you install, update or uninstall dependencies, the full package manager output is kept here for troubleshooting.
   readingLog: Reading log…
   copyLog: Copy log
   copied: Log copied.
@@ -157,11 +160,12 @@ history:
   unknownTime: Unknown time
   defaultSource: Project default
 timeline:
+  emptyTitle: No version history
   title: '{name} version history'
   current: Current version
   currentBadge: Current
   loading: Reading version history…
-  empty: This dependency has not been installed or updated through Market Next yet.
+  empty: Once this dependency is installed or updated through Market Next, each version is listed here so you can switch back at any time.
   loadFailed: Failed to read version history. Try again later.
   from: Changed from {version}
   useVersion: Set as target version

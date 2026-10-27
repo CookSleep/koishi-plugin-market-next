@@ -5,11 +5,14 @@
     destroy-on-close
     :class="['market-dialog', 'install-history-dialog']"
     :title="t('operations.history.title')"
-    width="960px"
+    :width="entries.length || loading ? '960px' : '520px'"
   >
-    <div v-if="!entries.length" class="history-state" :class="{ error: loadError }">
-      {{ loading ? t('operations.history.reading') : loadError || t('operations.history.empty') }}
-    </div>
+    <empty-state
+      v-if="!entries.length"
+      :icon="loadError ? 'market-next:inbox' : 'market-next:history'"
+      :title="loading ? t('operations.history.reading') : loadError ? t('operations.history.loadFailedTitle') : t('operations.history.emptyTitle')"
+      :description="loading ? '' : loadError || t('operations.history.empty')"
+    ></empty-state>
 
     <div v-else class="history-layout">
       <div class="history-list">
@@ -49,7 +52,10 @@
                 <template v-if="detail.duration != null"> · {{ formatDuration(detail.duration) }}</template>
               </p>
             </div>
-            <el-button size="small" @click="copyLog">{{ t('operations.history.copyLog') }}</el-button>
+            <el-button size="small" class="copy-log" @click="copyLog">
+              <k-icon name="market-next:copy"></k-icon>
+              {{ t('operations.history.copyLog') }}
+            </el-button>
           </header>
 
           <dl class="detail-meta">
@@ -68,6 +74,8 @@
             </div>
           </div>
 
+          <div class="log-title">{{ t('operations.history.logTitle') }}</div>
+          <pre class="log-content">{{ detail.content }}</pre>
           <p v-if="detail.truncated" class="truncated-note">{{ t('operations.history.truncated') }}</p>
         </template>
       </section>
@@ -85,6 +93,7 @@ import { computed, ref, watch } from 'vue'
 import { message, send } from '@koishijs/client'
 import type { InstallHistoryChange, InstallHistoryEntry, InstallLogDetail } from 'koishi-plugin-market-next'
 import { formatEndpoint, showInstallHistory } from './utils'
+import EmptyState from './empty-state.vue'
 import { useMarketNextI18n } from '../i18n'
 
 const { t, locale } = useMarketNextI18n()
@@ -120,6 +129,7 @@ async function loadHistory(preserveSelection = false) {
   } catch (error) {
     console.error(error)
     loadError.value = t('operations.history.loadFailed')
+    if (entries.value.length) message.error(loadError.value)
   } finally {
     loading.value = false
   }
@@ -420,6 +430,33 @@ function formatSize(value: number) {
       color: var(--fg1);
       font-weight: 600;
     }
+  }
+
+  .copy-log .k-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-right: 0.25rem;
+  }
+
+  .log-title {
+    margin: 1rem 0 0.5rem;
+    color: var(--fg3);
+    font-size: 0.8125rem;
+  }
+
+  .log-content {
+    max-height: 16rem;
+    margin: 0;
+    overflow: auto;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--fg2);
+    background: var(--k-side-bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .truncated-note {

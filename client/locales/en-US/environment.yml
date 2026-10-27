@@ -1,5 +1,7 @@
 title: Version Management
 intro: Market Next records the versions of all direct dependencies at startup and after every dependency operation. Pick a record to restore your dependencies to that point.
+emptyTitle: Nothing to restore yet
+loadFailedTitle: Failed to load
 refresh: Refresh
 current: Current
 currentEnvironment: Current environment

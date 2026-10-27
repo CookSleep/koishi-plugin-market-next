@@ -5,67 +5,85 @@
     destroy-on-close
     :class="['market-dialog', 'environment-versions-dialog']"
     :title="t('environment.title')"
-    width="1000px"
+    :width="hasHistory || loading ? '1000px' : '520px'"
   >
-    <p class="environment-intro">{{ t('environment.intro') }}</p>
+    <empty-state
+      v-if="!hasHistory"
+      icon="market-next:layers"
+      :title="loading ? t('environment.reading') : loadError ? t('environment.loadFailedTitle') : t('environment.emptyTitle')"
+      :description="loading ? '' : loadError || t('environment.empty')"
+    ></empty-state>
 
-    <div v-if="!snapshots.some(snapshot => !snapshot.current)" class="environment-state" :class="{ error: loadError }">
-      {{ loading ? t('environment.reading') : loadError || t('environment.empty') }}
-    </div>
+    <template v-else>
+      <p class="environment-intro">{{ t('environment.intro') }}</p>
 
-    <div v-else class="environment-layout">
-      <div class="snapshot-list">
-        <button
-          v-for="snapshot in snapshots"
-          :key="snapshot.id"
-          type="button"
-          :class="['snapshot-row', { active: snapshot.id === selectedId }]"
-          @click="selectSnapshot(snapshot.id)"
-        >
-          <span class="snapshot-title">
-            {{ snapshot.current ? t('environment.currentEnvironment') : formatDate(snapshot.createdAt) }}
-            <span v-if="snapshot.current" class="current-tag">{{ t('environment.current') }}</span>
-          </span>
-          <span class="snapshot-meta">
-            <template v-if="snapshot.current">{{ formatDate(snapshot.createdAt) }} · </template>
-            {{ sourceText(snapshot.source) }} · {{ t('environment.dependencies', { count: snapshot.dependencyCount }) }}
-          </span>
-        </button>
-      </div>
+      <div class="environment-layout">
+        <div class="snapshot-list">
+          <button
+            v-for="snapshot in snapshots"
+            :key="snapshot.id"
+            type="button"
+            :class="['snapshot-row', { active: snapshot.id === selectedId }]"
+            @click="selectSnapshot(snapshot.id)"
+          >
+            <span class="snapshot-title">
+              {{ snapshot.current ? t('environment.currentEnvironment') : formatDate(snapshot.createdAt) }}
+              <span v-if="snapshot.current" class="current-tag">{{ t('environment.current') }}</span>
+            </span>
+            <span class="snapshot-meta">
+              <template v-if="snapshot.current">{{ formatDate(snapshot.createdAt) }} · </template>
+              {{ sourceText(snapshot.source) }} · {{ t('environment.dependencies', { count: snapshot.dependencyCount }) }}
+            </span>
+          </button>
+        </div>
 
-      <section class="snapshot-detail">
-        <div v-if="previewLoading" class="environment-state">{{ t('environment.readingPreview') }}</div>
-        <div v-else-if="previewError" class="environment-state error">{{ previewError }}</div>
-        <div v-else-if="preview?.snapshot.current" class="environment-state">{{ t('environment.isCurrent') }}</div>
-        <template v-else-if="preview">
-          <header class="preview-header">
-            <h3>{{ formatDate(preview.snapshot.createdAt) }}</h3>
-            <p>
-              {{ t('environment.changedCount', { count: changedCount }) }}
-              <span v-if="preview.unsupportedCount" class="blocked"> · {{ t('environment.unsupportedCount', { count: preview.unsupportedCount }) }}</span>
-            </p>
-          </header>
+        <section class="snapshot-detail">
+          <div v-if="previewLoading" class="environment-state">{{ t('environment.readingPreview') }}</div>
+          <div v-else-if="previewError" class="environment-state error">{{ previewError }}</div>
+          <div v-else-if="preview?.snapshot.current" class="environment-state">{{ t('environment.isCurrent') }}</div>
+          <template v-else-if="preview">
+            <header class="preview-header">
+              <h3>{{ formatDate(preview.snapshot.createdAt) }}</h3>
+              <p>
+                {{ t('environment.changedCount', { count: changedCount }) }}
+                <span v-if="preview.unsupportedCount" class="blocked"> · {{ t('environment.unsupportedCount', { count: preview.unsupportedCount }) }}</span>
+              </p>
+            </header>
 
-          <p v-if="!changedCount" class="environment-state">{{ t('environment.noChanges') }}</p>
-          <div v-if="visibleChanges.length" class="diff-list">
-            <div v-for="change in visibleChanges" :key="change.name" :class="['diff-row', change.status]">
-              <strong :title="change.name">{{ change.name }}</strong>
-              <span class="diff-versions">
-                <span>{{ versionText(change.currentVersion) }}</span>
-                <span class="version-arrow">→</span>
-                <span class="target">{{ versionText(change.targetVersion) }}</span>
-              </span>
-              <span :class="['change-status', change.status]">{{ statusText(change.status) }}</span>
-              <small v-if="change.reason" class="change-reason">{{ reasonText(change.reason) }}</small>
+            <div class="change-stats">
+              <div
+                v-for="status in (['upgrade', 'downgrade', 'added', 'removed'] as const)"
+                :key="status"
+                :class="['change-stat', status, { empty: !preview.changes.some(change => change.status === status) }]"
+              >
+                <strong>{{ preview.changes.filter(change => change.status === status).length }}</strong>
+                <span>{{ statusText(status) }}</span>
+              </div>
             </div>
-          </div>
 
-          <el-button v-if="unchangedCount" class="toggle-unchanged" type="primary" text size="small" @click="showUnchanged = !showUnchanged">
-            {{ showUnchanged ? t('environment.hideUnchanged') : t('environment.showUnchanged', { count: unchangedCount }) }}
-          </el-button>
-        </template>
-      </section>
-    </div>
+            <p v-if="!changedCount" class="environment-state">{{ t('environment.noChanges') }}</p>
+            <div v-if="visibleChanges.length" class="diff-list">
+              <div v-for="change in visibleChanges" :key="change.name" :class="['diff-row', change.status]">
+                <strong :title="change.name">{{ change.name }}</strong>
+                <span class="diff-versions">
+                  <span>{{ versionText(change.currentVersion) }}</span>
+                  <span class="version-arrow">→</span>
+                  <span class="target">{{ versionText(change.targetVersion) }}</span>
+                </span>
+                <span :class="['change-status', change.status]">{{ statusText(change.status) }}</span>
+                <small v-if="change.reason" class="change-reason">{{ reasonText(change.reason) }}</small>
+              </div>
+            </div>
+
+            <el-button v-if="unchangedCount" class="toggle-unchanged" type="primary" text size="small" @click="showUnchanged = !showUnchanged">
+              {{ showUnchanged ? t('environment.hideUnchanged') : t('environment.showUnchanged', { count: unchangedCount }) }}
+            </el-button>
+
+            <p class="scope-note">{{ t('environment.scopeWarning') }}</p>
+          </template>
+        </section>
+      </div>
+    </template>
 
     <template #footer>
       <el-button class="environment-refresh" :loading="loading" @click="loadSnapshots(true)">{{ t('environment.refresh') }}</el-button>
@@ -97,7 +115,7 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { send } from '@koishijs/client'
+import { message, send } from '@koishijs/client'
 import type {
   EnvironmentChangeStatus,
   EnvironmentSnapshotChange,
@@ -107,6 +125,7 @@ import type {
 } from 'koishi-plugin-market-next'
 import { applyEnvironmentSnapshot, showEnvironmentVersions } from './utils'
 import { useMarketNextI18n } from '../i18n'
+import EmptyState from './empty-state.vue'
 
 const { t, locale } = useMarketNextI18n()
 const snapshots = ref<EnvironmentSnapshotSummary[]>([])
@@ -118,6 +137,7 @@ const loadError = ref('')
 const previewError = ref('')
 const confirmVisible = ref(false)
 const showUnchanged = ref(false)
+const hasHistory = computed(() => snapshots.value.some(snapshot => !snapshot.current))
 let previewSerial = 0
 
 watch(showEnvironmentVersions, (visible) => {
@@ -167,6 +187,7 @@ async function loadSnapshots(preserveSelection = false) {
   } catch (error) {
     console.error(error)
     loadError.value = t('environment.loadFailed')
+    if (hasHistory.value) message.error(loadError.value)
   } finally {
     loading.value = false
   }
@@ -252,7 +273,7 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
   .environment-layout {
     display: grid;
     grid-template-columns: 16rem minmax(0, 1fr);
-    height: min(30rem, calc(100vh - 18rem));
+    height: min(24rem, calc(100vh - 18rem));
     border: 1px solid var(--k-color-border);
     border-radius: 8px;
     overflow: hidden;
@@ -405,6 +426,56 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
 
   .toggle-unchanged {
     margin-top: 0.5rem;
+  }
+
+  .change-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .change-stat {
+    display: grid;
+    gap: 0.125rem;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    background: var(--k-side-bg);
+
+    strong {
+      font-size: 1.25rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.4;
+    }
+
+    span {
+      color: var(--fg3);
+      font-size: 0.8125rem;
+    }
+
+    &.upgrade strong,
+    &.added strong {
+      color: var(--k-color-success);
+    }
+
+    &.downgrade strong {
+      color: var(--warning);
+    }
+
+    &.removed strong {
+      color: var(--danger);
+    }
+
+    &.empty strong {
+      color: var(--fg3);
+    }
+  }
+
+  .scope-note {
+    margin: 1rem 0 0;
+    color: var(--fg3);
+    font-size: 0.8125rem;
+    line-height: 1.6;
   }
 
   .environment-refresh {

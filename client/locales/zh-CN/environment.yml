@@ -1,11 +1,13 @@
 title: 版本管理
 intro: Market Next 会在启动时和每次依赖操作后记下所有直接依赖的版本。选一个记录，就能把依赖恢复到当时的样子。
+emptyTitle: 暂时没有可以恢复的版本
+loadFailedTitle: 读取失败
 refresh: 刷新
 current: 当前
 currentEnvironment: 当前环境
 dependencies: '{count} 个依赖'
 reading: 正在读取记录……
-empty: 目前只有当前环境的记录。之后每次安装、更新或卸载依赖，都会多一条可以恢复的记录。
+empty: 目前只记录了当前环境。之后每次安装、更新或卸载依赖，都会多一条可以恢复的记录。
 readingPreview: 正在对比差异……
 isCurrent: 这就是当前环境，选一条更早的记录来对比差异。
 noChanges: 和当前环境完全一样。
