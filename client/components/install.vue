@@ -15,15 +15,15 @@
       ></version-picker>
     </template>
 
-    <k-comment class="danger" v-if="danger" type="danger">{{ danger }}</k-comment>
-    <k-comment class="warning" v-if="warning" type="warning">{{ warning }}</k-comment>
+    <k-comment class="danger" v-if="danger" type="danger"><p>{{ danger }}</p></k-comment>
+    <k-comment class="warning" v-if="warning" type="warning"><p>{{ warning }}</p></k-comment>
 
     <div v-if="!data && active && !localSelection">
-      <k-comment :type="registryStatus?.error ? 'danger' : 'info'">{{ registryStatusText }}</k-comment>
+      <k-comment :type="registryStatus?.error ? 'danger' : 'primary'"><p>{{ registryStatusText }}</p></k-comment>
     </div>
 
     <k-comment v-if="store.dependencies?.[active] && !current" type="danger">
-      {{ t('operations.install.installErrorHint') }}
+      <p>{{ t('operations.install.installErrorHint') }}</p>
     </k-comment>
 
     <el-scrollbar v-if="data?.[version] && Object.keys(data[version].peers).length" class="peer-table-scroll">

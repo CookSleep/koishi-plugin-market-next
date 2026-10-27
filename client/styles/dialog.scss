@@ -16,6 +16,10 @@
   .el-dialog__body {
     max-height: calc(100vh - 14rem);
     overflow-y: auto;
+    // k-comment hangs its icon 12px past the left edge, which the scroll box would clip.
+    // Extend the box into the dialog padding and pad it back so the content stays put.
+    margin-left: -12px;
+    padding-left: 12px;
   }
 
   // Element Plus gives disabled plain buttons a fixed light-theme grey, which stays bright in dark mode.

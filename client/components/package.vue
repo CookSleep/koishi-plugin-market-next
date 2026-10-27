@@ -132,7 +132,7 @@
   >
     <div class="dep-dialog-body">
       <p>{{ t('dependencyCard.localBinding.description', { name: displayName }) }}</p>
-      <k-comment type="warning">{{ t('dependencyCard.localBinding.note') }}</k-comment>
+      <k-comment type="warning"><p>{{ t('dependencyCard.localBinding.note') }}</p></k-comment>
     </div>
     <template #footer>
       <el-button @click="showLocalBindingDialog = false">{{ t('dependencyCard.localBinding.cancel') }}</el-button>

@@ -83,7 +83,7 @@
                 <k-comment v-if="member.conflict === 'other-config'" type="warning" class="member-warning">
                   <p>{{ t('bundle.conflict.config') }}</p>
                 </k-comment>
-                <k-comment v-if="member.conflict === 'same-group'" type="info" class="member-warning">
+                <k-comment v-if="member.conflict === 'same-group'" type="primary" class="member-warning">
                   <p>{{ t('bundle.conflict.sameGroup') }}</p>
                 </k-comment>
 
