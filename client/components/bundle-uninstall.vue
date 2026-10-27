@@ -438,6 +438,8 @@ async function uninstallBundle() {
       background: none;
       color: var(--k-color-primary);
       cursor: pointer;
+      // Native buttons don't inherit the page font.
+      font: inherit;
       font-size: 0.74rem;
       padding: 2px 6px;
       border-radius: 6px;

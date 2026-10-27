@@ -3,9 +3,24 @@
 .market-dialog {
   max-width: calc(100vw - 32px);
 
+  // el-dialog pins the 48px close button to the dialog's top edge, which puts the X
+  // above the first line of the title. Center it on that line instead.
+  .el-dialog__headerbtn {
+    top: calc(var(--el-dialog-padding-primary, 16px) + var(--el-dialog-font-line-height, 24px) / 2 - 24px);
+    // The icon itself sits on the text baseline inside the button, slightly above its center.
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .el-dialog__body {
     max-height: calc(100vh - 14rem);
     overflow-y: auto;
+  }
+
+  // Element Plus gives disabled plain buttons a fixed light-theme grey, which stays bright in dark mode.
+  .el-button:not(.el-button--primary, .el-button--success, .el-button--warning, .el-button--danger, .el-button--info) {
+    --el-button-disabled-text-color: var(--fg3);
   }
 
   .el-dialog__footer {

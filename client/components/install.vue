@@ -91,7 +91,8 @@
         </template>
         <template v-else-if="data">
           <el-button v-if="showRemoveButton" @click="requestRemove()" type="danger">{{ t('operations.install.uninstall') }}</el-button>
-          <el-button :type="result" @click="installDep(version)" :disabled="unchanged">
+          <!-- The color shows compatibility; a disabled button has nothing to report, so it stays neutral. -->
+          <el-button :type="unchanged ? undefined : result" @click="installDep(version)" :disabled="unchanged">
             {{ current ? t('operations.install.update') : store.dependencies?.[active] ? t('operations.install.repair') : t('operations.install.install') }}
           </el-button>
         </template>

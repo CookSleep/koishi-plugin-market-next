@@ -661,6 +661,8 @@ function syncDateDrafts() {
   border: 1px solid var(--k-color-border);
   color: var(--k-text-normal);
   background: var(--k-card-bg);
+  // Native buttons don't inherit the page font.
+  font: inherit;
   font-size: 12.5px;
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
