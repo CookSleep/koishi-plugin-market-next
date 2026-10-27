@@ -227,7 +227,10 @@ pnpm add koishi-plugin-market-next
 | --- | --- | --- |
 | `registry.endpoint` | 跟随项目配置 | 查询版本和安装用的 npm 源。 |
 | `registry.timeoutSeconds` | `5` | 获取单个依赖版本信息的超时秒数，0 表示不限时。这不是整个安装过程的超时。 |
-| `registry.autoRoute` | `true` | 获取失败时换用备用源，安装失败后也会询问是否换源重试。 |
+| `registry.autoRoute` | `true` | 当前源出错或迟迟没有结果时，同时请求备用源，用最先返回的结果；每次请求仍先问当前源。安装失败后也会询问是否换源重试。 |
+| `registry.fallbackDelaySeconds` | `2` | 当前源多少秒内没有结果时开始请求备用源，出错时立即请求。 |
+| `registry.primaryFailureLimit` | `3` | 当前源连续失败或超时多少次后，暂时先请求备用源。0 表示从不切换。 |
+| `registry.primaryBypassMinutes` | `5` | 暂时先请求备用源的分钟数，到时后重新先问当前源。 |
 | `registry.retry` | `1` | 每个源失败后重试几次。 |
 | `registry.concurrency` | `4` | 同时获取多少个依赖的版本信息。 |
 | `registry.installLogRetentionDays` | `3` | 安装、更新和卸载日志保留多少天。 |
@@ -239,7 +242,10 @@ pnpm add koishi-plugin-market-next
 | `search.endpoint` | t4wefan 镜像 | 插件市场索引地址。 |
 | `search.timeoutSeconds` | `30` | 拉取索引的超时秒数，0 表示不限时。 |
 | `search.proxyAgent` | 空 | 拉取市场索引时用的代理，不影响 npm 源。 |
-| `search.autoRoute` | `true` | 当前源失败或明显偏慢时换用备用源。 |
+| `search.autoRoute` | `true` | 当前源出错或迟迟没有结果时，同时请求备用源，用最先返回且不比已有数据旧的结果；每次刷新仍先问当前源。 |
+| `search.fallbackDelaySeconds` | `3` | 当前源多少秒内没有结果时开始请求备用源，出错时立即请求。 |
+| `search.primaryFailureLimit` | `3` | 当前源连续失败或超时多少次后，暂时先请求备用源。0 表示从不切换。 |
+| `search.primaryBypassMinutes` | `5` | 暂时先请求备用源的分钟数，到时后重新先问当前源。 |
 
 **市场过滤**
 

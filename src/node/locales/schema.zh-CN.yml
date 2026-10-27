@@ -20,20 +20,28 @@
       idleProbeIntervalHours: 两次检查之间至少间隔多少小时。
 
 - registry:
-    $description: npm 源
-    endpoint: 安装插件使用的 npm 源。留空时沿用项目自己的 npm 配置。
-    timeoutSeconds: 获取单个依赖版本信息的超时时间，单位为秒，0 表示不限时。
-    autoRoute: 当前源获取失败时，自动换用备用源。
-    retry: 每个源失败后重试的次数。
-    concurrency: 同时获取版本信息的依赖数量。
-    installLogRetentionDays: 安装、更新和卸载日志的保留天数。
+    - $description: npm 源
+      endpoint: 安装插件使用的 npm 源。留空时沿用项目自己的 npm 配置。
+      timeoutSeconds: 获取单个依赖版本信息的超时时间，单位为秒，0 表示不限时。
+      autoRoute: 当前源出错或迟迟没有结果时，同时请求备用源，用最先返回的结果。每次请求仍然先问当前源。
+    - - {}
+      - fallbackDelaySeconds: 当前源多少秒内没有结果时开始请求备用源。当前源出错时会立即请求。
+        primaryFailureLimit: 当前源连续失败或超时多少次后，暂时改为先请求备用源。超过上面的等待时间仍没有结果、被备用源抢先，也算一次。0 表示从不切换。
+        primaryBypassMinutes: 暂时改用备用源的时长，单位为分钟。到时后重新先请求当前源。
+    - retry: 每个源失败后重试的次数。
+      concurrency: 同时获取版本信息的依赖数量。
+      installLogRetentionDays: 安装、更新和卸载日志的保留天数。
 
 - search:
-    $description: 插件市场源
-    endpoint: 插件市场索引的地址，其他可用的镜像列在本页顶部。
-    timeoutSeconds: 拉取市场索引的超时时间，单位为秒，0 表示不限时。
-    proxyAgent: 拉取市场索引时使用的代理，不影响 npm 源。
-    autoRoute: 当前市场源失败或明显偏慢时，自动换用备用源。
+    - $description: 插件市场源
+      endpoint: 插件市场索引的地址，其他可用的镜像列在本页顶部。
+      timeoutSeconds: 拉取市场索引的超时时间，单位为秒，0 表示不限时。
+      proxyAgent: 拉取市场索引时使用的代理，不影响 npm 源。
+      autoRoute: 当前市场源出错或迟迟没有结果时，同时请求备用源，用最先返回且不比已有数据旧的结果。每次刷新仍然先问当前源。
+    - - {}
+      - fallbackDelaySeconds: 当前市场源多少秒内没有结果时开始请求备用源。当前市场源出错时会立即请求。
+        primaryFailureLimit: 当前市场源连续失败或超时多少次后，暂时改为先请求备用源。超过上面的等待时间仍没有结果、被备用源抢先，也算一次。0 表示从不切换。
+        primaryBypassMinutes: 暂时改用备用源的时长，单位为分钟。到时后重新先请求当前市场源。
 
 - $description: 市场过滤
   marketSilentRules:

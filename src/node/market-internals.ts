@@ -46,6 +46,9 @@ export interface MarketProviderConfig {
   timeout?: number
   proxyAgent?: string
   autoRoute?: boolean
+  fallbackDelaySeconds?: number
+  primaryFailureLimit?: number
+  primaryBypassMinutes?: number
 }
 
 export interface CacheFile {
@@ -75,6 +78,7 @@ export interface PersistedRouteStats {
   score: number
   consecutiveFailures?: number
   cooldownUntil?: number
+  lastFailure?: number
 }
 
 export interface CacheStore {
@@ -113,6 +117,7 @@ export interface RouteStats {
   cooldownUntil?: number
   averageElapsed?: number
   lastSuccess?: number
+  lastFailure?: number
   contentEncoding?: string
 }
 

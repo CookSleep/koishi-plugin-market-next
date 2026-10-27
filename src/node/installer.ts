@@ -827,14 +827,28 @@ namespace Installer {
 
   export interface Config extends InstallerConfig {}
 
-  export const Config: Schema<Config> = Schema.object({
-    endpoint: Schema.string().role('link'),
-    timeoutSeconds: Schema.number().min(0).default(5),
-    autoRoute: Schema.boolean().default(true),
-    retry: Schema.number().min(0).max(5).step(1).default(1),
-    concurrency: Schema.number().min(1).max(16).step(1).default(4),
-    installLogRetentionDays: Schema.number().min(1).max(365).step(1).default(3),
-  }) // TODO .hidden()
+  export const Config: Schema<Config> = Schema.intersect([
+    Schema.object({
+      endpoint: Schema.string().role('link'),
+      timeoutSeconds: Schema.number().min(0).default(5),
+      autoRoute: Schema.boolean().default(true),
+    }),
+    Schema.union([
+      Schema.object({
+        autoRoute: Schema.const(false).required(),
+      }),
+      Schema.object({
+        fallbackDelaySeconds: Schema.number().min(0).default(2),
+        primaryFailureLimit: Schema.number().min(0).step(1).default(3),
+        primaryBypassMinutes: Schema.number().min(0).default(5),
+      }),
+    ]),
+    Schema.object({
+      retry: Schema.number().min(0).max(5).step(1).default(1),
+      concurrency: Schema.number().min(1).max(16).step(1).default(4),
+      installLogRetentionDays: Schema.number().min(1).max(365).step(1).default(3),
+    }),
+  ]) // TODO .hidden()
 }
 
 export default Installer

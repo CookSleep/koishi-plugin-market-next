@@ -729,12 +729,24 @@ class MarketProvider extends BaseMarketProvider {
 namespace MarketProvider {
   export interface Config extends MarketProviderConfig {}
 
-  export const Config: Schema<Config> = Schema.object({
-    endpoint: Schema.string().role('link').default(DEFAULT_ENDPOINT),
-    timeoutSeconds: Schema.number().min(0).default(30),
-    proxyAgent: Schema.string().role('link'),
-    autoRoute: Schema.boolean().default(true),
-  })
+  export const Config: Schema<Config> = Schema.intersect([
+    Schema.object({
+      endpoint: Schema.string().role('link').default(DEFAULT_ENDPOINT),
+      timeoutSeconds: Schema.number().min(0).default(30),
+      proxyAgent: Schema.string().role('link'),
+      autoRoute: Schema.boolean().default(true),
+    }),
+    Schema.union([
+      Schema.object({
+        autoRoute: Schema.const(false).required(),
+      }),
+      Schema.object({
+        fallbackDelaySeconds: Schema.number().min(0).default(3),
+        primaryFailureLimit: Schema.number().min(0).step(1).default(3),
+        primaryBypassMinutes: Schema.number().min(0).default(5),
+      }),
+    ]),
+  ])
 }
 
 export default MarketProvider

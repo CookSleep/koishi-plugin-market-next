@@ -15,6 +15,9 @@ export interface InstallerConfig {
   /** Milliseconds, derived from timeoutSeconds in the provider constructor. */
   timeout?: number
   autoRoute?: boolean
+  fallbackDelaySeconds?: number
+  primaryFailureLimit?: number
+  primaryBypassMinutes?: number
   retry?: number
   concurrency?: number
   installLogRetentionDays?: number
