@@ -151,10 +151,12 @@ history:
   statusError: 失败
   statusUnknown: 状态未知
   operation: 依赖操作
-  install: 安装了 {count} 个依赖
-  update: 更新了 {count} 个依赖
-  uninstall: 卸载了 {count} 个依赖
-  changed: 改动了 {count} 个依赖
+  install: 安装 {count} 个依赖
+  upgrade: 升级 {count} 个依赖
+  downgrade: 降级 {count} 个依赖
+  update: 更新 {count} 个依赖
+  uninstall: 卸载 {count} 个依赖
+  changed: 改动 {count} 个依赖
   notInstalled: 未安装
   uninstalled: 已卸载
   unknownTime: 时间未知

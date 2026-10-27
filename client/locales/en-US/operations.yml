@@ -151,10 +151,12 @@ history:
   statusError: Failed
   statusUnknown: Unknown status
   operation: Dependency operation
-  install: Installed {count} dependency(ies)
-  update: Updated {count} dependency(ies)
-  uninstall: Uninstalled {count} dependency(ies)
-  changed: Changed {count} dependencies
+  install: Install {count} dependency(ies)
+  upgrade: Upgrade {count} dependency(ies)
+  downgrade: Downgrade {count} dependency(ies)
+  update: Update {count} dependency(ies)
+  uninstall: Uninstall {count} dependency(ies)
+  changed: Change {count} dependency(ies)
   notInstalled: Not installed
   uninstalled: Uninstalled
   unknownTime: Unknown time

@@ -75,7 +75,7 @@
           </div>
 
           <div class="log-title">{{ t('operations.history.logTitle') }}</div>
-          <pre class="log-content">{{ detail.content }}</pre>
+          <pre ref="logEl" class="log-content">{{ detail.content }}</pre>
           <p v-if="detail.truncated" class="truncated-note">{{ t('operations.history.truncated') }}</p>
         </template>
       </section>
@@ -89,8 +89,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { message, send } from '@koishijs/client'
+import { compare, valid } from 'semver'
 import type { InstallHistoryChange, InstallHistoryEntry, InstallLogDetail } from 'koishi-plugin-market-next'
 import { createSerialLoader, formatEndpoint, showInstallHistory, useDeferredDialog } from './utils'
 import EmptyState from './empty-state.vue'
@@ -100,6 +101,7 @@ const { t, locale } = useMarketNextI18n()
 const entries = ref<InstallHistoryEntry[]>([])
 const selectedId = ref('')
 const detail = ref<InstallLogDetail>()
+const logEl = ref<HTMLElement>()
 const loading = ref(false)
 const detailLoading = ref(false)
 const loadError = ref('')
@@ -155,6 +157,11 @@ async function selectEntry(id: string, force = false) {
   }
 }
 
+// A failed or interrupted operation logs why it stopped at the end.
+watch(logEl, (el) => {
+  if (el && detail.value?.status !== 'success') el.scrollTop = el.scrollHeight
+})
+
 async function copyLog() {
   if (!detail.value?.content) return
   try {
@@ -191,13 +198,22 @@ function historyTitle(entry: InstallHistoryEntry) {
   let installed = 0
   let removed = 0
   let updated = 0
+  let upgraded = 0
+  let downgraded = 0
   for (const change of entry.changes) {
+    const before = valid(change.beforeResolved || change.beforeRequest)
+    const after = valid(change.afterResolved || change.afterRequest)
+    const direction = before && after ? compare(after, before) : 0
     if (!change.beforeRequest && change.afterRequest) installed++
     else if (change.beforeRequest && !change.afterRequest) removed++
+    else if (direction > 0) upgraded++
+    else if (direction < 0) downgraded++
     else updated++
   }
   const groups = [
     installed && t('operations.history.install', { count: installed }),
+    upgraded && t('operations.history.upgrade', { count: upgraded }),
+    downgraded && t('operations.history.downgrade', { count: downgraded }),
     updated && t('operations.history.update', { count: updated }),
     removed && t('operations.history.uninstall', { count: removed }),
   ].filter(Boolean)

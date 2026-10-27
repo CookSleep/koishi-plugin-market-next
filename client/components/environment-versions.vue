@@ -65,7 +65,8 @@
             <div v-if="visibleChanges.length" class="diff-list">
               <div v-for="change in visibleChanges" :key="change.name" :class="['diff-row', change.status]">
                 <strong :title="change.name">{{ change.name }}</strong>
-                <span class="diff-versions">
+                <span v-if="change.status === 'unchanged'" class="diff-versions">{{ versionText(change.currentVersion) }}</span>
+                <span v-else class="diff-versions">
                   <span>{{ versionText(change.currentVersion) }}</span>
                   <span class="version-arrow">→</span>
                   <span class="target">{{ versionText(change.targetVersion) }}</span>
@@ -490,8 +491,16 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
 
 }
 
-.environment-confirm-dialog p {
-  margin-top: 0;
+// Only the lead paragraph loses its top margin. The ones inside k-comment keep both margins,
+// which the comment relies on to center its text, and the last comment sits on the footer.
+.environment-confirm-dialog {
+  .el-dialog__body > p {
+    margin-top: 0;
+  }
+
+  .k-comment:last-child {
+    margin-bottom: 0;
+  }
 }
 
 @media (max-width: 768px) {
