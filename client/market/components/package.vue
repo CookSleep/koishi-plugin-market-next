@@ -110,7 +110,7 @@ const badge = computed(() => {
       type: 'bundle',
       query: 'is:bundle',
       negate: 'not:bundle',
-      icon: 'file-archive',
+      icon: 'layer-group',
     }
   }
   for (const type in badges) {
@@ -367,21 +367,24 @@ onUnmounted(() => {
   box-shadow: none;
   transition: border-color 0.18s ease, background-color 0.18s ease;
 
-  &.cat-adapter    { --c: #38bdf8; }
-  &.cat-general    { --c: #4ade80; }
-  &.cat-extension  { --c: #a78bfa; }
-  &.cat-webui      { --c: #fb923c; }
-  &.cat-manage     { --c: #facc15; }
-  &.cat-preset     { --c: #60a5fa; }
-  &.cat-image      { --c: #f472b6; }
-  &.cat-media      { --c: #e879f9; }
-  &.cat-tool       { --c: #94a3b8; }
-  &.cat-life       { --c: #34d399; }
-  &.cat-ai         { --c: #818cf8; }
-  &.cat-meme       { --c: #fbbf24; }
-  &.cat-game       { --c: #f87171; }
-  &.cat-gametool   { --c: #c084fc; }
-  &.cat-other      { --c: #64748b; }
+  // Koishi has no category colors; these are our own. Related categories share a color
+  // family: blues for AI, connection and the console, pinks for content, warm colors for
+  // entertainment, greens for services.
+  &.cat-ai         { --c: #3b82f6; }
+  &.cat-adapter    { --c: #0ea5e9; }
+  &.cat-manage     { --c: #06b6d4; }
+  &.cat-webui      { --c: #6366f1; }
+  &.cat-extension  { --c: #8b5cf6; }
+  &.cat-image      { --c: #ec4899; }
+  &.cat-media      { --c: #f43f5e; }
+  &.cat-game       { --c: #ef4444; }
+  &.cat-gametool   { --c: #f97316; }
+  &.cat-preset     { --c: #f59e0b; }
+  &.cat-meme       { --c: #eab308; }
+  &.cat-general    { --c: #10b981; }
+  &.cat-life       { --c: #84cc16; }
+  &.cat-tool       { --c: #64748b; }
+  &.cat-other      { --c: #a1a1aa; }
 
   &:hover {
     border-color: var(--k-color-primary);
@@ -433,6 +436,8 @@ onUnmounted(() => {
       }
 
       .icon {
+        // A long title should truncate instead of squeezing the badge.
+        flex: none;
         margin-left: 0.5rem;
         padding: 0 6px;
         height: 20px;

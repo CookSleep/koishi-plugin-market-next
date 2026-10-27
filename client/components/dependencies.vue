@@ -256,7 +256,7 @@ const summary = computed(() => {
 const filterKeys: Record<FilterKey, [string, string]> = {
   all: ['all', 'solid:all'],
   pending: ['pending', 'tag'],
-  bundle: ['bundle', 'file-archive'],
+  bundle: ['bundle', 'layer-group'],
   unconfigured: ['unconfigured', 'preview'],
   updatable: ['updatable', 'asc'],
   ignored: ['ignored', 'market-next:bell-off'],

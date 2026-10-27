@@ -211,7 +211,7 @@ const bundleRecord = computed(() => getBundleRecords(config.value)[props.name] |
 const displayName = computed(() => formatShortname(props.name))
 
 const icon = computed(() => {
-  if (isBundlePackageName(props.name)) return 'file-archive'
+  if (isBundlePackageName(props.name)) return 'layer-group'
   const category = getMarketObject(props.name)?.category
   if (category) return `solid:${resolveCategory(category)}`
   return props.name.includes('adapter-') ? 'solid:adapter' : 'solid:other'
