@@ -166,7 +166,7 @@ export function setupActions(ctx: Context) {
     label: () => translate('common.actions.history'),
   }, {
     id: '.versions',
-    icon: 'file-archive',
+    icon: 'market-next:versions',
     label: () => translate('common.actions.versionManagement'),
   }, {
     id: 'market.refresh',

@@ -9,7 +9,7 @@
   >
     <empty-state
       v-if="!hasHistory"
-      icon="market-next:layers"
+      icon="market-next:versions"
       :title="loading ? t('environment.reading') : loadError ? t('environment.loadFailedTitle') : t('environment.emptyTitle')"
       :description="loading ? '' : loadError || t('environment.empty')"
     ></empty-state>
