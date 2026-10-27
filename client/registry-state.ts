@@ -25,6 +25,7 @@ declare module '@koishijs/client' {
       invalid?: boolean
       latest?: string
     }>
+    pluginConfigs?: string[]
   }
 }
 

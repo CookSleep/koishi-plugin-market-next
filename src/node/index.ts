@@ -2,7 +2,7 @@ import { Context, Dict } from 'koishi'
 import { DependencyMetaKey, Registry, RemotePackage } from '@koishijs/registry'
 import { resolve } from 'path'
 import { logger, setLogLevel } from './logger'
-import { DependencyProvider, RegistryProvider, RegistryStatusProvider } from './deps'
+import { DependencyProvider, PluginConfigProvider, RegistryProvider, RegistryStatusProvider } from './deps'
 import { MarketDataStore, MarketDataStorePayload } from './data'
 import Installer, {
   InstallFallbackCandidate,
@@ -85,6 +85,7 @@ declare module '@koishijs/console' {
       dependencies: DependencyProvider
       registry: RegistryProvider
       registryStatus: RegistryStatusProvider
+      pluginConfigs: PluginConfigProvider
       marketData: MarketDataStore
     }
   }
@@ -163,6 +164,7 @@ export function apply(ctx: Context, config: Config = {}) {
     ctx.plugin(DependencyProvider)
     ctx.plugin(RegistryProvider)
     ctx.plugin(RegistryStatusProvider)
+    ctx.plugin(PluginConfigProvider)
     const dataStore = new MarketDataStore(ctx)
     activeDataStore = dataStore
     ctx.effect(() => () => {

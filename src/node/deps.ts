@@ -3,6 +3,7 @@ import { DataService } from '@koishijs/console'
 import { DependencyMetaKey, RemotePackage } from '@koishijs/registry'
 import { Dependency } from './installer'
 import { RegistryStatus } from '../shared'
+import { listPluginConfigs } from './plugin-config'
 
 class DependencyProvider extends DataService<Dict<Dependency>> {
   constructor(public ctx: Context) {
@@ -34,4 +35,15 @@ class RegistryStatusProvider extends DataService<Dict<RegistryStatus>> {
   }
 }
 
-export { DependencyProvider, RegistryProvider, RegistryStatusProvider }
+class PluginConfigProvider extends DataService<string[]> {
+  constructor(public ctx: Context) {
+    super(ctx, 'pluginConfigs', { authority: 4 })
+    ctx.on('config', () => this.refresh())
+  }
+
+  async get() {
+    return [...listPluginConfigs(this.ctx.loader.config?.plugins)]
+  }
+}
+
+export { DependencyProvider, PluginConfigProvider, RegistryProvider, RegistryStatusProvider }

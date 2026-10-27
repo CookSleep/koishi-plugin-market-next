@@ -36,6 +36,9 @@ export function getConfigWriter(ctx: Context) {
   return ctx.get('configWriter') as ClientConfigWriter | undefined
 }
 
+// Shortnames of the plugins in koishi.yml. configWriter misses entries whose $if is false.
+export const configuredPlugins = computed(() => new Set(store.pluginConfigs))
+
 interface AnalyzeResult {
   peers: Dict<PeerInfo>
   result: ResultType
@@ -558,9 +561,9 @@ async function waitForInstalledPackage(name: string) {
   }
 }
 
-async function waitForInstalledConfig(ctx: Context, name: string) {
+async function waitForInstalledConfig(name: string) {
   for (let index = 0; index < 40; index++) {
-    if (getConfigWriter(ctx)?.get(name)?.length) return true
+    if (configuredPlugins.value.has(getPluginShortname(name))) return true
     await sleep(250)
   }
   return false
@@ -570,7 +573,7 @@ export async function ensureInstalledConfig(ctx: Context, name: string, silent =
   if (!name || !getConfigWriter(ctx)) return
   await (send('market/ensure-config', name) ?? Promise.resolve(false)).catch(console.error)
   await waitForInstalledPackage(name)
-  if (await waitForInstalledConfig(ctx, name)) return
+  if (await waitForInstalledConfig(name)) return
   const configWriter = getConfigWriter(ctx)
   if (!configWriter || configWriter.get(name)?.length) return
   configWriter.ensure(name, silent)

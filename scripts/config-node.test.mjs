@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { ensureMarketNextConfigDefaults } from '../src/node/config.ts'
+import { listPluginConfigs } from '../src/node/plugin-config.ts'
 
 test('prefers the active market-next node over disabled matches in groups', () => {
   const disabled = { frontendMode: 'polished' }
@@ -102,4 +103,18 @@ test('rounds migrated log retention to whole days within the schema range', () =
   const long = { frontendMode: 'performance', depsLayout: 'grid', registry: { installLogRetention: 400 * 24 * 3600 * 1000 } }
   ensureMarketNextConfigDefaults({ loader: { config: { plugins: { 'market-next:main': long } } } }, {})
   assert.equal(long.registry.installLogRetentionDays, 365)
+})
+
+test('lists every configured plugin, including disabled entries and ones behind $if', () => {
+  const plugins = {
+    $collapsed: true,
+    'android:a': { $if: 'false' },
+    '~logger:b': {},
+    'group:c': {
+      $if: 'false',
+      'adapter-qq:d': {},
+      '~group:e': { '@scope/echo:f': {} },
+    },
+  }
+  assert.deepEqual([...listPluginConfigs(plugins)].sort(), ['@scope/echo', 'adapter-qq', 'android', 'logger'])
 })

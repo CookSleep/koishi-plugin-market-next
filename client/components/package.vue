@@ -163,10 +163,10 @@
 import { computed, ref } from 'vue'
 import { message, send, store, useConfig, useContext } from '@koishijs/client'
 import type { SearchObject } from '@koishijs/registry'
-import { isBundlePackageName, PLUGIN_PACKAGE_RE } from '../../src/shared/bundle'
+import { getPluginShortname, isBundlePackageName, PLUGIN_PACKAGE_RE } from '../../src/shared/bundle'
 import { isLocalDependency } from '../../src/shared/dependency-source'
 import { createUpdateIgnoreRule, day, getBundleRecords, getFrontendMode, getIgnoredUpdateVersion, getLatestVersion, getMarketNextPolicy, getPendingOverrides, getWritableMarketNextPolicy, getUpdateIgnoreText, hasUpdate, isUpdateCheckDisabled, isUpdateIgnored, patchMarketNextConfig, patchMarketNextData } from '../utils'
-import { activeBundle, analyzeVersions, createLocalBundleRecord, ensureInstalledConfig, expandedDependency, formatEndpoint, formatShortname, getConfigWriter, getRegistryStatus, getRegistryStatusText, pendingBundleUninstalls } from './utils'
+import { activeBundle, analyzeVersions, configuredPlugins, createLocalBundleRecord, ensureInstalledConfig, expandedDependency, formatEndpoint, formatShortname, getConfigWriter, getRegistryStatus, getRegistryStatusText, pendingBundleUninstalls } from './utils'
 import { resolveCategory } from '../market/utils'
 import MarketIcon from '../market/icons'
 import BundleUninstall from './bundle-uninstall.vue'
@@ -272,7 +272,7 @@ const bundlePackage = computed(() => !!bundleRecord.value)
 const unconfigured = computed(() => {
   if (bundlePackage.value) return false
   const writer = getConfigWriter(ctx)
-  return !!writer && !!local.value && PLUGIN_PACKAGE_RE.test(props.name) && !writer.get(props.name)?.length
+  return !!writer && !!local.value && PLUGIN_PACKAGE_RE.test(props.name) && !configuredPlugins.value.has(getPluginShortname(props.name))
 })
 
 const selectedVersion = computed({

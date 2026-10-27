@@ -142,6 +142,7 @@ export async function installBundle(ctx: Context, dataStore: MarketDataStore, re
     ctx.get('console')?.refresh('registry'),
     ctx.get('console')?.refresh('packages'),
     ctx.get('console')?.refresh('config'),
+    ctx.get('console')?.refresh('pluginConfigs'),
   ])
   const record: PluginBundleRecord | undefined = code ? undefined : {
     package: request.package,

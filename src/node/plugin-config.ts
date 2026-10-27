@@ -16,14 +16,16 @@ import { logger } from './logger'
 
 const SELF_PACKAGE = 'koishi-plugin-market-next'
 
-export function hasPluginConfig(plugins: any, shortname: string): boolean {
+// Shortnames of every plugin in koishi.yml, including disabled entries and ones whose $if is false.
+// Koishi's config service hides the latter from the console, so the console reads this list instead.
+export function listPluginConfigs(plugins: any, result = new Set<string>()) {
   for (const key in plugins || {}) {
     if (key.startsWith('$')) continue
     const name = getConfigKeyName(key)
-    if (name === shortname) return true
-    if (name === 'group' && hasPluginConfig(plugins[key], shortname)) return true
+    if (name === 'group') listPluginConfigs(plugins[key], result)
+    else result.add(name)
   }
-  return false
+  return result
 }
 
 export function findPluginConfig(plugins: any, shortname: string, group?: any): { key: string, parent: any, inGroup: boolean, value: any } | undefined {
@@ -84,14 +86,21 @@ export async function ensurePluginConfig(ctx: Context, name: string, write = tru
   }
 
   const shortname = getPluginShortname(name)
-  if (hasPluginConfig(ctx.loader.config?.plugins, shortname)) return false
+  if (listPluginConfigs(ctx.loader.config?.plugins).has(shortname)) return false
 
   await requestPluginRuntime(ctx, name).catch(error => logger.warn(error))
-  if (hasPluginConfig(ctx.loader.config?.plugins, shortname)) return false
+  if (listPluginConfigs(ctx.loader.config?.plugins).has(shortname)) return false
 
   const key = createDisabledPluginConfig(ctx, shortname)
   if (!key) return false
-  if (write) await ctx.loader.writeConfig()
+  if (write) {
+    await ctx.loader.writeConfig()
+    // A write that merges into a pending silent one emits no config event.
+    await Promise.all([
+      ctx.get('console')?.refresh('config'),
+      ctx.get('console')?.refresh('pluginConfigs'),
+    ])
+  }
   logger.info('created disabled default config entry %c for %c', key, name)
   return true
 }
@@ -109,6 +118,7 @@ export async function ensurePluginConfigs(ctx: Context, names: string[]) {
   await ctx.loader.writeConfig()
   await Promise.all([
     ctx.get('console')?.refresh('config'),
+    ctx.get('console')?.refresh('pluginConfigs'),
     ctx.get('console')?.refresh('packages'),
   ])
   logger.info(`plugin config ensure completed: checked=${checked}, elapsed=${Date.now() - start}ms`)
@@ -121,7 +131,8 @@ export async function ensureInstalledPluginConfigs(ctx: Context) {
   const names = Object.keys(manifest.dependencies ?? {})
     .filter(name => Scanner.isPlugin(name))
     .filter(name => !isPluginBundleDependency(name))
-  const missing = names.filter(name => !hasPluginConfig(ctx.loader.config?.plugins, getPluginShortname(name)))
+  const configured = listPluginConfigs(ctx.loader.config?.plugins)
+  const missing = names.filter(name => !configured.has(getPluginShortname(name)))
   logger.debug(`installed plugin config repair scan: total=${names.length}, missing=${missing.length}`)
   if (!missing.length) return false
   await sleep(0)
@@ -197,6 +208,7 @@ export async function removeBundleConfigs(ctx: Context, request: BundleConfigRem
     await ctx.loader.writeConfig()
     await Promise.all([
       ctx.get('console')?.refresh('config'),
+      ctx.get('console')?.refresh('pluginConfigs'),
       ctx.get('console')?.refresh('packages'),
     ])
     logger.info(`plugin bundle config cleanup completed: bundle=${request.package}, removed=${result.removed.length}, removedGroup=${!!result.removedGroup}`)

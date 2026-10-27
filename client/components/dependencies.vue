@@ -102,12 +102,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, WatchStopHandle } fro
 import { message, router, store, useConfig, useContext } from '@koishijs/client'
 import { useMarketNextI18n } from '../i18n'
 import { getBundleRecords, getCollapsedGroups, getFrontendMode, getDepsLayout, getLatestVersion, getMarketNextConfig, getMarketNextPolicy, getPendingOverrides, getWritableMarketNextPolicy, hasUpdate, isUpdateCheckDisabled, isUpdateIgnored, patchMarketNextConfig, patchMarketNextData } from '../utils'
-import { addManual, createLocalBundleRecord, getConfigWriter, getRegistryStatus, pendingBundleUninstalls, showConfirm, type ClientConfigWriter } from './utils'
+import { addManual, configuredPlugins, createLocalBundleRecord, getConfigWriter, getRegistryStatus, pendingBundleUninstalls, showConfirm } from './utils'
 import ManualInstall from './manual.vue'
 import PackageView from './package.vue'
 import EmptyState from './empty-state.vue'
 import MarketIcon from '../market/icons'
-import { PLUGIN_PACKAGE_RE } from '../../src/shared/bundle'
+import { getPluginShortname, PLUGIN_PACKAGE_RE } from '../../src/shared/bundle'
 import { shouldIncludeDiscoveredLocalPlugin } from '../../src/shared/dependency-source'
 import { loadMarketObjects } from '../market/state'
 import { isRegistryRefreshing } from '../registry-state'
@@ -145,18 +145,17 @@ function isManageableBundle(name: string) {
 }
 
 const names = computed(() => {
-  const configWriter = getConfigWriter(ctx)
   const explicit: Record<string, unknown> = {
     ...(store.dependencies ?? {}),
     ...getPendingOverrides(),
   }
   for (const name of Object.keys(store.packages ?? {})) {
     const pkg = store.packages?.[name]
-    if (isUnconfigured(name, configWriter)
+    if (isUnconfigured(name)
       || isManageableBundle(name)
       || PLUGIN_PACKAGE_RE.test(name) && shouldIncludeDiscoveredLocalPlugin({
         declared: !!store.dependencies?.[name],
-        configured: !!configWriter?.get(name)?.length,
+        configured: configuredPlugins.value.has(getPluginShortname(name)),
         running: !!pkg?.runtime?.id,
         workspace: !!pkg?.workspace,
       })) {
@@ -205,14 +204,14 @@ function onSearchShortcut(event: KeyboardEvent) {
   searchInput.value?.focus?.()
 }
 
-function classify(name: string, configWriter?: ClientConfigWriter): ItemKind {
+function classify(name: string): ItemKind {
   const dep = store.dependencies?.[name]
   if (Object.prototype.hasOwnProperty.call(getPendingOverrides(), name)) return 'pending'
   if (!dep) return store.packages?.[name] ? 'local' : 'manual'
   if (dep.local || dep.workspace) return 'local'
   if (dep.invalid) return 'invalid'
   if (isManageableBundle(name)) return 'bundle'
-  if (isUnconfigured(name, configWriter)) return 'unconfigured'
+  if (isUnconfigured(name)) return 'unconfigured'
   if (getRegistryStatus(name)?.error) return 'error'
   const policy = getMarketNextPolicy(config.value)
   if (isUpdateCheckDisabled(name, policy)) return 'check-disabled'
@@ -221,16 +220,16 @@ function classify(name: string, configWriter?: ClientConfigWriter): ItemKind {
   return 'installed'
 }
 
-function isUnconfigured(name: string, configWriter = getConfigWriter(ctx)) {
+// Without the config plugin there is no way to add a config, so nothing counts as unconfigured.
+function isUnconfigured(name: string) {
   if (isManageableBundle(name)) return false
-  return !!configWriter && !!store.packages?.[name] && PLUGIN_PACKAGE_RE.test(name) && !configWriter.get(name)?.length
+  return !!getConfigWriter(ctx) && !!store.packages?.[name] && PLUGIN_PACKAGE_RE.test(name) && !configuredPlugins.value.has(getPluginShortname(name))
 }
 
 const items = computed<DependencyItem[]>(() => {
-  const configWriter = getConfigWriter(ctx)
   return names.value.map(name => ({
     name,
-    kind: classify(name, configWriter),
+    kind: classify(name),
     pending: Object.prototype.hasOwnProperty.call(getPendingOverrides(), name),
     manual: !store.dependencies?.[name] && !store.packages?.[name],
   }))

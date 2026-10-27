@@ -45,6 +45,7 @@ export function setupConsoleListeners(
       ctx.get('console')?.refresh('registry'),
       ctx.get('console')?.refresh('packages'),
       ctx.get('console')?.refresh('config'),
+      ctx.get('console')?.refresh('pluginConfigs'),
     ])
     return code
   }, { authority: 4 })
@@ -127,6 +128,7 @@ export function setupConsoleListeners(
   addListener('market/refresh-dependencies', async () => {
     await ctx.installer.refresh(true)
     await ctx.get('console')?.refresh('config')
+    await ctx.get('console')?.refresh('pluginConfigs')
   }, { authority: 4 })
 
   addListener('market/package', async (name) => {
