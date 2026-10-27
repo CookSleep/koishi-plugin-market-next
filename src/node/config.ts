@@ -18,9 +18,9 @@ export interface Config {
   marketSilentRules?: MarketSilentRule[]
   marketSilentFilters?: string
   idleProbe?: boolean
-  idleProbeDelay?: number
-  idleProbeBootDelay?: number
-  idleProbeInterval?: number
+  idleProbeDelayMinutes?: number
+  idleProbeBootDelayMinutes?: number
+  idleProbeIntervalHours?: number
   bulkMode?: boolean
   removeConfig?: boolean
   updateIgnoredPackages?: string
@@ -99,9 +99,9 @@ export const Config: Schema<Config> = Schema.object({
     Schema.const('list').description('列表'),
   ]).role('radio').default('grid').description('Dependencies page layout.'),
   idleProbe: Schema.boolean().default(true).description('Run dependency and market metadata probes while Console is idle.'),
-  idleProbeDelay: Schema.number().role('time').default(Time.minute * 5).description('How long Console must stay idle before the background probe starts.'),
-  idleProbeBootDelay: Schema.number().role('time').default(Time.minute).description('Minimum delay after startup before idle probing is allowed.'),
-  idleProbeInterval: Schema.number().role('time').default(Time.hour * 6).description('Minimum interval between idle background probes.'),
+  idleProbeDelayMinutes: Schema.number().min(0).default(5).description('How long Console must stay idle before the background probe starts, in minutes.'),
+  idleProbeBootDelayMinutes: Schema.number().min(0).default(1).description('Minimum delay after startup before idle probing is allowed, in minutes.'),
+  idleProbeIntervalHours: Schema.number().min(0).default(6).description('Minimum interval between idle background probes, in hours.'),
   bulkMode: Schema.boolean().default(false).hidden().description('Batch operation mode for dependency changes.'),
   removeConfig: Schema.union([
     Schema.const(undefined).description('Ask every time'),
@@ -139,9 +139,9 @@ const configPatchKeys: Array<keyof Config> = [
   'marketSilentRules',
   'marketSilentFilters',
   'idleProbe',
-  'idleProbeDelay',
-  'idleProbeBootDelay',
-  'idleProbeInterval',
+  'idleProbeDelayMinutes',
+  'idleProbeBootDelayMinutes',
+  'idleProbeIntervalHours',
   'bulkMode',
   'removeConfig',
   'updateIgnoredPackages',
@@ -153,10 +153,20 @@ const configPatchKeys: Array<keyof Config> = [
 const configReloadKeys = new Set<keyof Config>([
   'logLevel',
   'idleProbe',
-  'idleProbeDelay',
-  'idleProbeBootDelay',
-  'idleProbeInterval',
+  'idleProbeDelayMinutes',
+  'idleProbeBootDelayMinutes',
+  'idleProbeIntervalHours',
 ])
+
+// Time options used to be stored in milliseconds. They are now stored in the
+// unit shown in the config page, and old keys are converted once on startup.
+const legacyTimeOptions: Array<[path: '' | 'registry' | 'search', from: string, to: string, unit: number]> = [
+  ['', 'idleProbeDelay', 'idleProbeDelayMinutes', Time.minute],
+  ['', 'idleProbeBootDelay', 'idleProbeBootDelayMinutes', Time.minute],
+  ['', 'idleProbeInterval', 'idleProbeIntervalHours', Time.hour],
+  ['registry', 'timeout', 'timeoutSeconds', Time.second],
+  ['search', 'timeout', 'timeoutSeconds', Time.second],
+]
 
 function findMarketNextConfigNode(plugins: any, currentConfig: Config): { parent: any, key: string, value: any } | undefined {
   let best: { parent: any, key: string, value: any, priority: number } | undefined
@@ -193,6 +203,18 @@ export function ensureMarketNextConfigDefaults(ctx: Context, currentConfig: Conf
   }
   if (Object.prototype.hasOwnProperty.call(target.value, 'marketLayout')) {
     delete target.value.marketLayout
+    changed = true
+  }
+  for (const [path, from, to, unit] of legacyTimeOptions) {
+    const raw = path ? target.value[path] : target.value
+    if (typeof raw?.[from] !== 'number') continue
+    const value = Math.max(0, Number((raw[from] / unit).toFixed(4)))
+    // 0 keeps its old meaning; other sub-second timeouts are rounded up to the schema minimum.
+    raw[to] ??= unit === Time.second && value > 0 ? Math.max(1, value) : value
+    delete raw[from]
+    // The running config was parsed before the conversion, so it only has the defaults.
+    const current = path ? currentConfig[path] ??= {} : currentConfig
+    current[to] = raw[to]
     changed = true
   }
   return changed

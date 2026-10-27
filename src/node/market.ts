@@ -53,6 +53,7 @@ class MarketProvider extends BaseMarketProvider {
   constructor(ctx: Context, public config: MarketProvider.Config = {}) {
     super(ctx)
     config.endpoint ||= DEFAULT_ENDPOINT
+    config.timeout = config.timeoutSeconds * Time.second
     this.endpoint = config.endpoint
     this.cache = new MarketDiskCache(ctx, config, {
       getEndpointCandidates: () => this.router.getEndpointCandidates(),
@@ -705,7 +706,7 @@ namespace MarketProvider {
 
   export const Config: Schema<Config> = Schema.object({
     endpoint: Schema.string().role('link').default(DEFAULT_ENDPOINT),
-    timeout: Schema.number().role('time').default(Time.second * 30),
+    timeoutSeconds: Schema.number().min(0).default(30),
     proxyAgent: Schema.string().role('link'),
     autoRoute: Schema.boolean().default(true),
     logLevel: Schema.union(logLevels.map(level => Schema.const(level))).default('warn'),

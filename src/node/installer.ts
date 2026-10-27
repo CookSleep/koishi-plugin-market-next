@@ -101,6 +101,7 @@ class Installer extends Service {
 
   constructor(public ctx: Context, public config: Installer.Config = {}) {
     super(ctx, 'installer')
+    config.timeout = config.timeoutSeconds * Time.second
     this.manifest = loadManifest(this.cwd)
     this.metadata = new RegistryMetadata(ctx, config)
     this.installHistory = new InstallHistoryStore(ctx, config, name => this.depCache[name]?.resolved)
@@ -799,7 +800,7 @@ namespace Installer {
 
   export const Config: Schema<Config> = Schema.object({
     endpoint: Schema.string().role('link'),
-    timeout: Schema.number().role('time').default(Time.second * 5),
+    timeoutSeconds: Schema.number().min(0).default(5),
     autoRoute: Schema.boolean().default(true),
     retry: Schema.number().min(0).max(5).step(1).default(1),
     concurrency: Schema.number().min(1).max(16).step(1).default(4),

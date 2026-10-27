@@ -24,9 +24,9 @@ confirmTitle: 恢复依赖版本
 confirmText: 将一次性应用 {count} 处依赖改动。
 removeWarning: 有 {count} 个依赖会被移除，但对应的插件配置和数据会保留。
 confirmRestore: 恢复
-sourceStartup: 启动时记录
-sourceOperation: 依赖操作后记录
-sourceExternal: 检测到外部改动
+sourceStartup: 启动时
+sourceOperation: 操作后
+sourceExternal: 外部改动
 change:
   upgrade: 升级
   downgrade: 降级

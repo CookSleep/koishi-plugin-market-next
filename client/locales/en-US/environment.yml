@@ -24,9 +24,9 @@ confirmTitle: Restore Dependency Versions
 confirmText: This applies {count} dependency change(s) in one go.
 removeWarning: '{count} dependency/dependencies will be removed, but their plugin config and data are kept.'
 confirmRestore: Restore
-sourceStartup: Recorded at startup
-sourceOperation: Recorded after a dependency operation
-sourceExternal: External change detected
+sourceStartup: Startup
+sourceOperation: After change
+sourceExternal: External
 change:
   upgrade: Upgrade
   downgrade: Downgrade

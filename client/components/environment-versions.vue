@@ -27,12 +27,14 @@
             @click="selectSnapshot(snapshot.id)"
           >
             <span class="snapshot-title">
-              {{ snapshot.current ? t('environment.currentEnvironment') : formatDate(snapshot.createdAt) }}
-              <span v-if="snapshot.current" class="current-tag">{{ t('environment.current') }}</span>
+              <span class="snapshot-name">{{ snapshot.current ? t('environment.currentEnvironment') : formatDate(snapshot.createdAt) }}</span>
+              <span :class="['source-tag', { current: snapshot.current }]" :title="sourceText(snapshot.source)">
+                {{ snapshot.current ? t('environment.current') : sourceText(snapshot.source) }}
+              </span>
             </span>
             <span class="snapshot-meta">
               <template v-if="snapshot.current">{{ formatDate(snapshot.createdAt) }} · </template>
-              {{ sourceText(snapshot.source) }} · {{ t('environment.dependencies', { count: snapshot.dependencyCount }) }}
+              {{ t('environment.dependencies', { count: snapshot.dependencyCount }) }}
             </span>
           </button>
         </div>
@@ -43,11 +45,9 @@
           <div v-else-if="preview?.snapshot.current" class="environment-state">{{ t('environment.isCurrent') }}</div>
           <template v-else-if="preview">
             <header class="preview-header">
-              <h3>{{ formatDate(preview.snapshot.createdAt) }}</h3>
-              <p>
-                {{ t('environment.changedCount', { count: changedCount }) }}
-                <span v-if="preview.unsupportedCount" class="blocked"> · {{ t('environment.unsupportedCount', { count: preview.unsupportedCount }) }}</span>
-              </p>
+              <strong>{{ formatDate(preview.snapshot.createdAt) }}</strong>
+              · {{ t('environment.changedCount', { count: changedCount }) }}
+              <span v-if="preview.unsupportedCount" class="blocked"> · {{ t('environment.unsupportedCount', { count: preview.unsupportedCount }) }}</span>
             </header>
 
             <div class="change-stats">
@@ -273,7 +273,7 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
   .environment-layout {
     display: grid;
     grid-template-columns: 16rem minmax(0, 1fr);
-    height: min(24rem, calc(100vh - 18rem));
+    height: min(22rem, calc(100vh - 18rem));
     border: 1px solid var(--k-color-border);
     border-radius: 8px;
     overflow: hidden;
@@ -310,8 +310,17 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
   .snapshot-title {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .snapshot-name {
+    min-width: 0;
+    overflow: hidden;
     font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .snapshot-meta {
@@ -319,14 +328,19 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
     font-size: 0.8125rem;
   }
 
-  .current-tag {
+  .source-tag {
+    flex: 0 0 auto;
     border-radius: 4px;
     padding: 0 0.375rem;
-    color: var(--k-color-success);
-    background: color-mix(in srgb, var(--k-color-success) 12%, transparent);
+    color: var(--fg3);
+    background: var(--k-side-bg);
     font-size: 0.75rem;
-    font-weight: normal;
     line-height: 1.25rem;
+
+    &.current {
+      color: var(--k-color-success);
+      background: color-mix(in srgb, var(--k-color-success) 12%, transparent);
+    }
   }
 
   .snapshot-detail {
@@ -337,17 +351,11 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
   }
 
   .preview-header {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
+    color: var(--fg2);
 
-    h3 {
-      margin: 0;
-      font-size: 1rem;
-    }
-
-    p {
-      margin: 0.25rem 0 0;
-      color: var(--fg3);
-      font-size: 0.8125rem;
+    strong {
+      color: var(--fg1);
     }
 
     .blocked {
@@ -436,16 +444,17 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
   }
 
   .change-stat {
-    display: grid;
-    gap: 0.125rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 0.375rem;
+    min-width: 0;
     border-radius: 8px;
     padding: 0.5rem 0.75rem;
     background: var(--k-side-bg);
 
     strong {
-      font-size: 1.25rem;
       font-variant-numeric: tabular-nums;
-      line-height: 1.4;
     }
 
     span {

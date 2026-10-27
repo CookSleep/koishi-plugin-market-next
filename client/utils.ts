@@ -30,9 +30,9 @@ export interface MarketNextConfigPatch extends UpdatePolicy {
   marketSilentRules?: MarketSilentRule[]
   marketSilentFilters?: string
   idleProbe?: boolean
-  idleProbeDelay?: number
-  idleProbeBootDelay?: number
-  idleProbeInterval?: number
+  idleProbeDelayMinutes?: number
+  idleProbeBootDelayMinutes?: number
+  idleProbeIntervalHours?: number
   bulkMode?: boolean
   removeConfig?: boolean
   bundleRecords?: Record<string, any>

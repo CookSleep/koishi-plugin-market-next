@@ -236,10 +236,8 @@ const loadingEndpoint = computed(() => {
 })
 
 const loadingTimeout = computed(() => {
-  const timeout = config.value.market?.search?.timeout
-  if (!timeout) return ''
-  if (typeof timeout === 'number') return timeout >= 1000 ? `${Math.round(timeout / 1000)}s` : `${timeout}ms`
-  return String(timeout)
+  const seconds = config.value.market?.search?.timeoutSeconds
+  return seconds ? `${seconds}s` : ''
 })
 
 const loadingAutoRoute = computed(() => config.value.market?.search?.autoRoute !== false)

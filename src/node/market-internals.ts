@@ -41,6 +41,8 @@ export type MarketSource = NonNullable<MarketPerformance['source']>
 
 export interface MarketProviderConfig {
   endpoint?: string
+  timeoutSeconds?: number
+  /** Milliseconds, derived from timeoutSeconds in the provider constructor. */
   timeout?: number
   proxyAgent?: string
   autoRoute?: boolean

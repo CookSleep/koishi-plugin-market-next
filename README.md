@@ -203,7 +203,7 @@ pnpm add koishi-plugin-market-next
 <summary><b>全部配置项</b></summary>
 <br>
 
-时间类配置的单位都是**毫秒**。
+时间类配置直接按配置项名称里的单位填写（分钟、小时、秒）。旧版本里以毫秒保存的 `idleProbeDelay`、`registry.timeout` 等配置，会在 Koishi 启动时自动换算成新的配置项（原来的 0 保持不变，其余不足 1 秒的超时按 1 秒处理）。
 
 **显示与后台检查**
 
@@ -212,9 +212,9 @@ pnpm add koishi-plugin-market-next
 | `frontendMode` | `performance` | 插件市场页的风格：`performance` 简洁，`polished` 带更多动效和背景装饰。 |
 | `depsLayout` | `grid` | 依赖管理页默认视图：`grid` 卡片、`list` 列表。页面上也可以随时切换。 |
 | `idleProbe` | `true` | 没有人打开控制台时，在后台检查依赖和市场有没有更新。只刷新数据，不会安装。 |
-| `idleProbeDelay` | `300000`（5 分钟） | 控制台没人在线多久后开始检查。 |
-| `idleProbeBootDelay` | `60000`（1 分钟） | Koishi 启动后至少等多久才开始检查。 |
-| `idleProbeInterval` | `21600000`（6 小时） | 两次检查之间至少间隔多久。 |
+| `idleProbeDelayMinutes` | `5` | 控制台没人在线多少分钟后开始检查。 |
+| `idleProbeBootDelayMinutes` | `1` | Koishi 启动后至少等多少分钟才开始检查。 |
+| `idleProbeIntervalHours` | `6` | 两次检查之间至少间隔多少小时。 |
 | `logLevel` | `warn` | 日志级别：`silent`、`error`、`warn`、`info`、`debug`。 |
 | `chatlunaTool` | `false` | 给 ChatLuna 注册只读的插件市场查询工具。 |
 
@@ -223,7 +223,7 @@ pnpm add koishi-plugin-market-next
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `search.endpoint` | t4wefan 镜像 | 插件市场索引地址。 |
-| `search.timeout` | `30000` | 拉取索引的超时时间。 |
+| `search.timeoutSeconds` | `30` | 拉取索引的超时秒数。 |
 | `search.proxyAgent` | 空 | 只用于拉取市场索引的代理。 |
 | `search.autoRoute` | `true` | 当前源失败或太慢时自动换用备用源。 |
 
@@ -232,7 +232,7 @@ pnpm add koishi-plugin-market-next
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `registry.endpoint` | 跟随实例配置 | 查询版本和安装用的 npm 源。 |
-| `registry.timeout` | `5000` | 单次查询版本的超时时间（不是整个安装的超时）。 |
+| `registry.timeoutSeconds` | `5` | 单次查询版本的超时秒数（不是整个安装的超时）。 |
 | `registry.autoRoute` | `true` | 查询失败时换用备用源，并允许安装失败后询问是否重试。 |
 | `registry.retry` | `1` | 每个源失败后重试几次。 |
 | `registry.concurrency` | `4` | 同时查询多少个依赖。 |
@@ -337,7 +337,7 @@ Market Next 会尽量减少误操作，但它不是沙盒，也不会扫描恶�
 <summary><b>依赖的版本一直显示「正在获取」或「获取失败」</b></summary>
 <br>
 
-版本信息来自 npm 源，和插件市场源无关。检查日志里的 npm 源地址，必要时在 `registry.endpoint` 填一个能访问的源。`registry.timeout` 只控制单次查询的超时。
+版本信息来自 npm 源，和插件市场源无关。检查日志里的 npm 源地址，必要时在 `registry.endpoint` 填一个能访问的源。`registry.timeoutSeconds` 只控制单次查询的超时。
 
 </details>
 

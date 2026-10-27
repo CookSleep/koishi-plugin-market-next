@@ -358,7 +358,7 @@ function formatSize(value: number) {
       align-items: center;
       gap: 0.5rem;
       margin: 0;
-      font-size: 1rem;
+      font-size: inherit;
     }
 
     p {

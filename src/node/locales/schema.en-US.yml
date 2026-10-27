@@ -1,7 +1,7 @@
 registry:
   $description: npm Registry
   endpoint: npm registry used to install plugins. Leave empty to follow the npm config of the current project.
-  timeout: Timeout of a single version lookup, in milliseconds.
+  timeoutSeconds: Timeout of a single version lookup, in seconds.
   autoRoute: Try fallback registries when the current one fails to return version info.
   retry: How many times to retry each registry after a failure.
   concurrency: How many dependencies to look up at the same time.
@@ -9,7 +9,7 @@ registry:
 search:
   $description: Plugin Market Source
   endpoint: URL of the plugin market index. Uses the t4wefan mirror by default.
-  timeout: Timeout for fetching the market index, in milliseconds.
+  timeoutSeconds: Timeout for fetching the market index, in seconds.
   proxyAgent: Proxy used only for fetching the market index.
   autoRoute: Try fallback sources when the current market source fails or is clearly too slow.
   logLevel: Plugin market log level (legacy setting).
@@ -17,9 +17,9 @@ search:
 logLevel: Log level. silent prints nothing; debug is the most detailed.
 marketSilentFilters: Legacy permanent silent filters.
 idleProbe: Check dependencies and the plugin market for updates in the background while nobody has the console open. It only refreshes data and never installs anything.
-idleProbeDelay: How long the console must be unattended before a background check starts, in milliseconds (default 5 minutes).
-idleProbeBootDelay: Minimum wait after Koishi starts or reloads before background checks are allowed, in milliseconds (default 1 minute).
-idleProbeInterval: Minimum interval between two background checks, in milliseconds (default 6 hours).
+idleProbeDelayMinutes: How long the console must be unattended before a background check starts, in minutes.
+idleProbeBootDelayMinutes: Minimum wait after Koishi starts or reloads before background checks are allowed, in minutes.
+idleProbeIntervalHours: Minimum interval between two background checks, in hours.
 bulkMode: Batch operation mode. Dependency install, update, and uninstall actions are staged until applying changes.
 removeConfig:
   $description: Whether to remove existing plugin config when uninstalling a plugin. Ask every time when unset.

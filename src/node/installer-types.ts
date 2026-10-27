@@ -11,6 +11,8 @@ export const SELF_PACKAGE = 'koishi-plugin-market-next'
 
 export interface InstallerConfig {
   endpoint?: string
+  timeoutSeconds?: number
+  /** Milliseconds, derived from timeoutSeconds in the provider constructor. */
   timeout?: number
   autoRoute?: boolean
   retry?: number
