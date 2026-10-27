@@ -86,7 +86,7 @@
     </template>
 
     <template #footer>
-      <el-button class="environment-refresh" :loading="loading" @click="loadSnapshots(true)">{{ t('environment.refresh') }}</el-button>
+      <el-button :loading="loading" @click="loadSnapshots(true)">{{ t('environment.refresh') }}</el-button>
       <el-button @click="showEnvironmentVersions = false">{{ t('common.actions.close') }}</el-button>
       <el-button v-if="preview && !preview.snapshot.current" type="primary" :disabled="!canApply" @click="confirmVisible = true">
         {{ t('environment.restore') }}
@@ -487,9 +487,6 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
     line-height: 1.6;
   }
 
-  .environment-refresh {
-    margin-right: auto;
-  }
 }
 
 .environment-confirm-dialog p {

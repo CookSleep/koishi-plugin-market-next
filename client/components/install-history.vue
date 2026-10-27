@@ -82,7 +82,7 @@
     </div>
 
     <template #footer>
-      <el-button class="history-refresh" :loading="loading" @click="loadHistory(true)">{{ t('operations.history.refresh') }}</el-button>
+      <el-button :loading="loading" @click="loadHistory(true)">{{ t('operations.history.refresh') }}</el-button>
       <el-button @click="showInstallHistory = false">{{ t('operations.history.close') }}</el-button>
     </template>
   </el-dialog>
@@ -465,9 +465,6 @@ function formatSize(value: number) {
     font-size: 0.8125rem;
   }
 
-  .history-refresh {
-    margin-right: auto;
-  }
 }
 
 @media (max-width: 768px) {

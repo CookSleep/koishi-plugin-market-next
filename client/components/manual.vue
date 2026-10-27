@@ -64,7 +64,7 @@
 
     <template #footer>
       <template v-if="mode === 'local'">
-        <el-button v-if="preview || uploadError" class="manual-another" :disabled="busy" @click="reset()">
+        <el-button v-if="preview || uploadError" :disabled="busy" @click="reset()">
           {{ t('operations.manual.chooseAnother') }}
         </el-button>
         <el-button :disabled="committing" @click="showManual = false">
@@ -231,7 +231,4 @@ function resetRegistry() {
   }
 }
 
-.manual-another {
-  margin-right: auto;
-}
 </style>

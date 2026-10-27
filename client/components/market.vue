@@ -542,7 +542,6 @@ function formatNumber(value?: number) {
 
 .search-box {
   background-color: var(--k-card-bg);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: var(--color-transition);
 }
 

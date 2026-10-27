@@ -1,5 +1,5 @@
 <template>
-  <a :class="['market-package flex flex-col gap-3', 'cat-' + resolveCategory(data.category), { 'bundle-card': bundlePackage }]" target="_blank" :href="homepage">
+  <a :class="['market-package flex flex-col', 'cat-' + resolveCategory(data.category), { 'bundle-card': bundlePackage }]" target="_blank" :href="homepage">
     <div class="header flex flex-row gap-4">
       <div :class="['left', 'shrink-0', 'flex', 'flex-row', 'justify-center', 'items-center', 'cat-' + resolveCategory(data.category)]">
         <market-icon :name="'outline:' + resolveCategory(data.category)"></market-icon>
@@ -351,17 +351,21 @@ onUnmounted(() => {
 .market-package {
   width: 100%;
   max-width: 540px;
-  height: calc(12.5rem + 2px);
+  // The height comes from the content; keep the grid from stretching it when there are only a few results.
+  align-self: start;
   margin: 0;
-  padding: 1rem 1.25rem;
+  padding: 0.875rem 1.125rem;
+  gap: 0.625rem;
   box-sizing: border-box;
   position: relative;
   contain: layout paint style;
-  contain-intrinsic-size: 12.5rem;
+  contain-intrinsic-size: 10.5rem;
   border-radius: 12px;
   background-color: var(--k-color-card, var(--k-card-bg));
   border: 1px solid var(--k-color-border);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  // k-card adds a drop shadow by default; the border is enough to separate cards.
+  box-shadow: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
 
   &.cat-adapter    { --c: #38bdf8; }
   &.cat-general    { --c: #4ade80; }
@@ -380,7 +384,6 @@ onUnmounted(() => {
   &.cat-other      { --c: #64748b; }
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     border-color: var(--k-color-primary);
   }
 
@@ -397,21 +400,18 @@ onUnmounted(() => {
     position: relative;
 
     .left {
-      width: 3.5rem;
-      height: 3.5rem;
+      width: 3rem;
+      height: 3rem;
       border-radius: 10px;
       border: 1px solid transparent;
       box-sizing: border-box;
       transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 
       svg {
-        height: 1.75rem;
+        height: 1.5rem;
       }
 
-      background: linear-gradient(135deg,
-        color-mix(in srgb, var(--c) 18%, var(--k-card-bg)),
-        color-mix(in srgb, var(--c) 10%, var(--k-card-bg))
-      );
+      background: color-mix(in srgb, var(--c) 12%, var(--k-card-bg));
       border-color: color-mix(in srgb, var(--c) 35%, var(--k-color-border));
       svg { color: var(--c); }
     }
@@ -492,7 +492,6 @@ onUnmounted(() => {
       align-items: center;
       gap: 0 0.35rem;
       width: fit-content;
-      margin-top: 4px;
       max-width: 100%;
       font-size: 12px;
       line-height: 1;
@@ -509,17 +508,19 @@ onUnmounted(() => {
     }
   }
 
+  // Always reserve two lines so every card in the grid has the same height.
   .desc {
-    margin: 4px 0 0;
+    margin: 0;
     font-size: 14px;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     line-height: 1.6;
+    height: 3.2em;
     color: var(--k-text-light, #666);
     overflow: hidden;
     word-break: break-word;
     text-overflow: ellipsis;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
 
@@ -528,7 +529,6 @@ onUnmounted(() => {
     gap: 0.5rem;
     align-items: center;
     height: 1.5rem;
-    margin-bottom: -0.25rem;
     cursor: default;
     font-size: 13px;
     color: var(--k-text-light, #888);
@@ -607,37 +607,13 @@ onUnmounted(() => {
 .market-package.bundle-card {
   --bundle-color: #8b5cf6;
   border-color: color-mix(in srgb, var(--bundle-color) 32%, var(--k-color-border));
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--bundle-color) 86%, transparent), color-mix(in srgb, var(--bundle-color) 26%, transparent) 54%, transparent) top left / 100% 3px no-repeat,
-    linear-gradient(135deg, color-mix(in srgb, var(--bundle-color) 10%, transparent) 0%, transparent 55%),
-    var(--k-color-card, var(--k-card-bg));
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--bundle-color) 12%, transparent), 0 1px 3px rgba(0, 0, 0, 0.04);
 
   &:hover {
     border-color: var(--bundle-color);
-    box-shadow:
-      0 16px 32px color-mix(in srgb, var(--bundle-color) 22%, transparent),
-      0 4px 12px rgba(0, 0, 0, 0.08),
-      inset 0 1px 0 rgb(255 255 255 / 8%);
-  }
-
-  // accent stripes top-left to suggest a "wrapped package"
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, var(--bundle-color), color-mix(in srgb, var(--bundle-color) 50%, transparent) 60%, transparent);
-    border-radius: 12px 12px 0 0;
-    pointer-events: none;
   }
 
   .header .left {
-    background: linear-gradient(135deg,
-      color-mix(in srgb, var(--bundle-color) 26%, var(--k-card-bg)),
-      color-mix(in srgb, var(--bundle-color) 14%, var(--k-card-bg)));
+    background: color-mix(in srgb, var(--bundle-color) 14%, var(--k-card-bg));
     border-color: color-mix(in srgb, var(--bundle-color) 38%, var(--k-color-border));
     svg { color: var(--bundle-color); }
   }
@@ -650,8 +626,6 @@ onUnmounted(() => {
 
 @media (max-width: 420px) {
   .market-package {
-    height: auto;
-    min-height: 11rem;
     padding: 0.82rem 0.9rem;
 
     .header {
@@ -672,12 +646,15 @@ onUnmounted(() => {
     .footer {
       flex-wrap: wrap;
       height: auto;
-      margin-bottom: 0;
       gap: 0.28rem 0.5rem;
 
       .spacer,
       .long-spacer {
         display: none;
+      }
+
+      .avatars {
+        margin-left: auto;
       }
     }
   }
