@@ -12,6 +12,7 @@ import {
   type UpdateIgnoreRule,
 } from '../src/shared/update'
 import { isLocalDependency } from '../src/shared/dependency-source'
+import { getConfigKeyName } from '../src/shared/bundle'
 
 export type { IgnoredUpdates, UpdateIgnoreRule } from '../src/shared/update'
 
@@ -443,8 +444,7 @@ function findMarketNextConfig(plugins: any): any {
       const value = object[rawKey]
       if (!value || typeof value !== 'object') continue
       const disabled = rawKey.startsWith('~')
-      const key = disabled ? rawKey.slice(1) : rawKey
-      const name = key.split(':', 1)[0]
+      const name = getConfigKeyName(rawKey)
       if (name === 'market-next' || name === 'koishi-plugin-market-next') {
         if (!disabled) return value
         fallback ||= value

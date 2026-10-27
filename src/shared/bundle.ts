@@ -171,6 +171,11 @@ export function getPluginShortname(name: string) {
   return name.replace(/(koishi-|^@koishijs\/)plugin-/, '')
 }
 
+// Plugin name in a koishi.yml key such as `~adapter-qq:abc123`.
+export function getConfigKeyName(key: string) {
+  return key.split(':', 1)[0].replace(/^~/, '')
+}
+
 export function normalizeBundleIdent(value: string) {
   return value.toLowerCase()
     .replace(/^@/, '')

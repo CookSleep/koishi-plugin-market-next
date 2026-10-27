@@ -2,7 +2,7 @@ import { Context, Dict, Schema, Time } from 'koishi'
 import Installer from './installer'
 import MarketProvider from './market'
 import { logLevels, type LogLevel } from './market-internals'
-import type { PluginBundleRecord } from '../shared/bundle'
+import { getConfigKeyName, type PluginBundleRecord } from '../shared/bundle'
 
 export interface Config {
   logLevel?: LogLevel
@@ -216,7 +216,7 @@ function findMarketNextConfigNode(plugins: any, currentConfig: Config): { parent
       const value = nodes[key]
       if (!value || typeof value !== 'object') continue
       const disabled = parentDisabled || key.startsWith('~')
-      const [name] = (key.startsWith('~') ? key.slice(1) : key).split(':', 1)
+      const name = getConfigKeyName(key)
       const named = name === 'market-next' || name === 'koishi-plugin-market-next'
       if (value === currentConfig || named) {
         const priority = (disabled ? 0 : 2) + (value === currentConfig ? 2 : 1)

@@ -7,6 +7,7 @@ import {
   BundleConfigRemoveResult,
   PluginBundleManifest,
   getBundleGroupIdent,
+  getConfigKeyName,
   getPluginShortname,
   isBundlePackageName,
   parseBundleManifest,
@@ -18,8 +19,7 @@ const SELF_PACKAGE = 'koishi-plugin-market-next'
 export function hasPluginConfig(plugins: any, shortname: string): boolean {
   for (const key in plugins || {}) {
     if (key.startsWith('$')) continue
-    const [prefix] = key.split(':', 1)
-    const name = prefix.replace(/^~/, '')
+    const name = getConfigKeyName(key)
     if (name === shortname) return true
     if (name === 'group' && hasPluginConfig(plugins[key], shortname)) return true
   }
@@ -30,8 +30,7 @@ export function findPluginConfig(plugins: any, shortname: string, group?: any): 
   for (const key in plugins || {}) {
     if (key.startsWith('$')) continue
     const value = plugins[key]
-    const [prefix] = key.split(':', 1)
-    const name = prefix.replace(/^~/, '')
+    const name = getConfigKeyName(key)
     if (name === shortname) return { key, parent: plugins, inGroup: !!group && plugins === group, value }
     if (name === 'group') {
       const found = findPluginConfig(value, shortname, group)
@@ -43,9 +42,7 @@ export function findPluginConfig(plugins: any, shortname: string, group?: any): 
 export function hasPluginConfigInGroup(plugins: any, shortname: string) {
   for (const key in plugins || {}) {
     if (key.startsWith('$')) continue
-    const [prefix] = key.split(':', 1)
-    const name = prefix.replace(/^~/, '')
-    if (name === shortname) return true
+    if (getConfigKeyName(key) === shortname) return true
   }
   return false
 }
@@ -183,8 +180,7 @@ export async function removeBundleConfigs(ctx: Context, request: BundleConfigRem
 
   for (const key of Object.keys(group.plugins)) {
     if (key.startsWith('$')) continue
-    const [prefix] = key.split(':', 1)
-    const shortname = prefix.replace(/^~/, '')
+    const shortname = getConfigKeyName(key)
     if (memberNames.size && !memberNames.has(shortname)) continue
     delete group.plugins[key]
     result.removed.push(key)
