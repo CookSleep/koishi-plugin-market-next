@@ -1,15 +1,15 @@
 <template>
   <el-dialog
-    v-model="showInstallHistory"
+    v-model="dialogVisible"
     append-to-body
     destroy-on-close
     :class="['market-dialog', 'install-history-dialog']"
     :title="t('operations.history.title')"
-    :width="entries.length || loading ? '960px' : '520px'"
+    :width="entries.length ? '960px' : '520px'"
   >
     <empty-state
       v-if="!entries.length"
-      :icon="loadError ? 'market-next:inbox' : 'market-next:history'"
+      :icon="loadError ? 'market-next:inbox' : 'clipboard-list'"
       :title="loading ? t('operations.history.reading') : loadError ? t('operations.history.loadFailedTitle') : t('operations.history.emptyTitle')"
       :description="loading ? '' : loadError || t('operations.history.empty')"
     ></empty-state>
@@ -89,10 +89,10 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue'
+import { ref } from 'vue'
 import { message, send } from '@koishijs/client'
 import type { InstallHistoryChange, InstallHistoryEntry, InstallLogDetail } from 'koishi-plugin-market-next'
-import { formatEndpoint, showInstallHistory } from './utils'
+import { createSerialLoader, formatEndpoint, showInstallHistory, useDeferredDialog } from './utils'
 import EmptyState from './empty-state.vue'
 import { useMarketNextI18n } from '../i18n'
 
@@ -106,12 +106,11 @@ const loadError = ref('')
 const detailError = ref('')
 let detailSerial = 0
 
-watch(showInstallHistory, (visible) => {
-  if (visible) void loadHistory()
-})
+const dialogVisible = useDeferredDialog(showInstallHistory, () => loadHistory())
 
-async function loadHistory(preserveSelection = false) {
-  if (loading.value) return
+const loadHistory = createSerialLoader(runLoadHistory)
+
+async function runLoadHistory(preserveSelection: boolean) {
   loading.value = true
   loadError.value = ''
   try {

@@ -2,7 +2,7 @@ import { Awaitable, Context, Dict, loading, message, receive, send, socket, stor
 import type { Registry, SearchObject } from '@koishijs/registry'
 import type { RegistryStatus } from 'koishi-plugin-market-next'
 import { compare, satisfies } from 'semver'
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, Ref, ref, watch } from 'vue'
 import { active } from '../utils'
 import { translate } from '../i18n'
 import { getMarketObject } from '../market/state'
@@ -130,6 +130,41 @@ export const showConfirm = ref(false)
 export const showInstallHistory = ref(false)
 export const showEnvironmentVersions = ref(false)
 export const expandedDependency = ref('')
+
+// Runs one load at a time. A call during a load waits for it instead of starting another, and
+// a refresh that keeps the current selection runs once that load is done.
+export function createSerialLoader(run: (preserveSelection: boolean) => Promise<void>) {
+  let task: Promise<void> | undefined
+  const load = (preserveSelection = false): Promise<void> => {
+    if (task) return preserveSelection ? task.then(() => load(true)) : task
+    task = run(preserveSelection).finally(() => task = undefined)
+    return task
+  }
+  return load
+}
+
+// Opens a dialog once its first load settles, or after a short wait, so it appears at the
+// width that fits its data instead of resizing when the data arrives.
+export function useDeferredDialog(source: Ref<boolean>, load: () => Promise<unknown>, timeout = 1000) {
+  const visible = ref(false)
+  let serial = 0
+  watch(source, (value) => {
+    const current = ++serial
+    if (!value) {
+      visible.value = false
+      return
+    }
+    const reveal = () => {
+      if (current === serial && source.value) visible.value = true
+    }
+    void load().finally(reveal)
+    setTimeout(reveal, timeout)
+  })
+  return computed({
+    get: () => visible.value,
+    set: (value: boolean) => source.value = value,
+  })
+}
 export const activeBundle = ref<SearchObject>()
 export type BundleMemberCleanupTarget = {
   package: string

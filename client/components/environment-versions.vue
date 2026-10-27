@@ -1,11 +1,11 @@
 <template>
   <el-dialog
-    v-model="showEnvironmentVersions"
+    v-model="dialogVisible"
     append-to-body
     destroy-on-close
     :class="['market-dialog', 'environment-versions-dialog']"
     :title="t('environment.title')"
-    :width="hasHistory || loading ? '1000px' : '520px'"
+    :width="hasHistory ? '1000px' : '520px'"
   >
     <empty-state
       v-if="!hasHistory"
@@ -123,7 +123,7 @@ import type {
   EnvironmentSnapshotSource,
   EnvironmentSnapshotSummary,
 } from 'koishi-plugin-market-next'
-import { applyEnvironmentSnapshot, showEnvironmentVersions } from './utils'
+import { applyEnvironmentSnapshot, createSerialLoader, showEnvironmentVersions, useDeferredDialog } from './utils'
 import { useMarketNextI18n } from '../i18n'
 import EmptyState from './empty-state.vue'
 
@@ -140,9 +140,9 @@ const showUnchanged = ref(false)
 const hasHistory = computed(() => snapshots.value.some(snapshot => !snapshot.current))
 let previewSerial = 0
 
+const dialogVisible = useDeferredDialog(showEnvironmentVersions, () => loadSnapshots())
 watch(showEnvironmentVersions, (visible) => {
-  if (visible) void loadSnapshots()
-  else confirmVisible.value = false
+  if (!visible) confirmVisible.value = false
 })
 
 const statusOrder: Record<EnvironmentChangeStatus, number> = {
@@ -169,8 +169,9 @@ const canApply = computed(() => !!preview.value
   && preview.value.actionableCount > 0
   && preview.value.unsupportedCount === 0)
 
-async function loadSnapshots(preserveSelection = false) {
-  if (loading.value) return
+const loadSnapshots = createSerialLoader(runLoadSnapshots)
+
+async function runLoadSnapshots(preserveSelection: boolean) {
   loading.value = true
   loadError.value = ''
   try {
