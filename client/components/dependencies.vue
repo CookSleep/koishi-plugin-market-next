@@ -1,5 +1,5 @@
 <template>
-  <k-layout main="page-deps" :class="[modeClass, `deps-layout-${depsLayout}`]" menu="dependencies">
+  <k-layout main="page-deps" :class="['page-dependencies', modeClass, `deps-layout-${depsLayout}`]" menu="dependencies">
     <div class="deps-toolbar">
       <el-input
         ref="searchInput"
