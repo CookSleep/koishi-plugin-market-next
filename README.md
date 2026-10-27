@@ -46,6 +46,20 @@
 <br>
 
 <div align="center">
+  <b>切换版本</b><br>
+  <img src="docs/images/version-picker.jpg" alt="依赖卡片上的版本选择器" />
+</div>
+
+<br>
+
+<div align="center">
+  <b>最近操作</b><br>
+  <img src="docs/images/install-history.jpg" alt="最近操作" />
+</div>
+
+<br>
+
+<div align="center">
   <b>版本管理</b><br>
   <img src="docs/images/environment-versions.jpg" alt="版本管理" />
 </div>
