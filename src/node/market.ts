@@ -10,7 +10,6 @@ import {
   formatSnapshot,
   formatTime,
   formatTimings,
-  logLevels,
   shortHash,
   waitFor,
   type EndpointResult,
@@ -20,7 +19,7 @@ import {
 import { MarketDiskCache } from './market-cache'
 import { MarketRouter } from './market-router'
 import { createMarketResultSnapshot } from './market-result'
-import { logger } from './logger'
+import { getLogLevel, logger } from './logger'
 
 export const DEFAULT_ENDPOINT = 'https://registry.koishi.t4wefan.pub/index.json'
 
@@ -680,7 +679,7 @@ class MarketProvider extends BaseMarketProvider {
   }
 
   private getDebugInfo(timings?: Dict<number>) {
-    if (this.config.logLevel !== 'debug') return
+    if (getLogLevel() !== 'debug') return
     if (!timings) return this.debugInfo
     return {
       ...this.debugInfo,
@@ -709,7 +708,6 @@ namespace MarketProvider {
     timeoutSeconds: Schema.number().min(0).default(30),
     proxyAgent: Schema.string().role('link'),
     autoRoute: Schema.boolean().default(true),
-    logLevel: Schema.union(logLevels.map(level => Schema.const(level))).default('warn'),
   })
 }
 

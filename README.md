@@ -197,46 +197,64 @@ pnpm add koishi-plugin-market-next
 
 ## ⚙️ 配置
 
-大部分选项保持默认即可，建议在控制台的插件配置页修改。
+大部分选项保持默认即可，建议在控制台的插件配置页修改。配置页按下面的分区排列。
 
 <details>
 <summary><b>全部配置项</b></summary>
 <br>
 
-时间类配置直接按配置项名称里的单位填写（分钟、小时、秒）。旧版本里以毫秒保存的 `idleProbeDelay`、`registry.timeout` 等配置，会在 Koishi 启动时自动换算成新的配置项（原来的 0 保持不变，其余不足 1 秒的超时按 1 秒处理）。
+时间类配置直接按配置项名称里的单位填写。旧版本里以毫秒或小时保存的 `idleProbeDelay`、`registry.timeout`、`registry.installLogRetentionHours` 等，会在 Koishi 启动时自动换算成新的配置项：超时填 0 仍表示不限时，其余不足 1 秒的超时按 1 秒处理。旧版的 `search.logLevel` 会并入顶层的 `logLevel`。
 
-**显示与后台检查**
+**显示**
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `frontendMode` | `performance` | 插件市场页的风格：`performance` 简洁，`polished` 带更多动效和背景装饰。 |
+| `frontendMode` | `performance` | 插件市场页的风格：`performance` 简洁，`polished` 带背景装饰和动画。 |
 | `depsLayout` | `grid` | 依赖管理页默认视图：`grid` 卡片、`list` 列表。页面上也可以随时切换。 |
-| `idleProbe` | `true` | 没有人打开控制台时，在后台检查依赖和市场有没有更新。只刷新数据，不会安装。 |
-| `idleProbeDelayMinutes` | `5` | 控制台没人在线多少分钟后开始检查。 |
-| `idleProbeBootDelayMinutes` | `1` | Koishi 启动后至少等多少分钟才开始检查。 |
+
+**后台检查**
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `idleProbe` | `true` | 控制台没人使用时，在后台检查依赖和市场的更新。只刷新数据，不会安装。关闭后下面三项不再显示。 |
+| `idleProbeDelayMinutes` | `5` | 控制台闲置多少分钟后开始检查。 |
+| `idleProbeBootDelayMinutes` | `1` | Koishi 启动或重载后至少等多少分钟再检查。 |
 | `idleProbeIntervalHours` | `6` | 两次检查之间至少间隔多少小时。 |
-| `logLevel` | `warn` | 日志级别：`silent`、`error`、`warn`、`info`、`debug`。 |
-| `chatlunaTool` | `false` | 给 ChatLuna 注册只读的插件市场查询工具。 |
+
+**npm 源（`registry`）**
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `registry.endpoint` | 跟随项目配置 | 查询版本和安装用的 npm 源。 |
+| `registry.timeoutSeconds` | `5` | 获取单个依赖版本信息的超时秒数，0 表示不限时。这不是整个安装过程的超时。 |
+| `registry.autoRoute` | `true` | 获取失败时换用备用源，安装失败后也会询问是否换源重试。 |
+| `registry.retry` | `1` | 每个源失败后重试几次。 |
+| `registry.concurrency` | `4` | 同时获取多少个依赖的版本信息。 |
+| `registry.installLogRetentionDays` | `3` | 安装、更新和卸载日志保留多少天。 |
 
 **插件市场源（`search`）**
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `search.endpoint` | t4wefan 镜像 | 插件市场索引地址。 |
-| `search.timeoutSeconds` | `30` | 拉取索引的超时秒数。 |
-| `search.proxyAgent` | 空 | 只用于拉取市场索引的代理。 |
-| `search.autoRoute` | `true` | 当前源失败或太慢时自动换用备用源。 |
+| `search.timeoutSeconds` | `30` | 拉取索引的超时秒数，0 表示不限时。 |
+| `search.proxyAgent` | 空 | 拉取市场索引时用的代理，不影响 npm 源。 |
+| `search.autoRoute` | `true` | 当前源失败或明显偏慢时换用备用源。 |
 
-**npm 源（`registry`）**
+**市场过滤**
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `registry.endpoint` | 跟随实例配置 | 查询版本和安装用的 npm 源。 |
-| `registry.timeoutSeconds` | `5` | 单次查询版本的超时秒数（不是整个安装的超时）。 |
-| `registry.autoRoute` | `true` | 查询失败时换用备用源，并允许安装失败后询问是否重试。 |
-| `registry.retry` | `1` | 每个源失败后重试几次。 |
-| `registry.concurrency` | `4` | 同时查询多少个依赖。 |
-| `registry.installLogRetentionHours` | `72` | 安装日志保留多少小时。 |
+| `marketSilentRules` | 空 | 符合规则的插件会直接从市场中隐藏，可以按状态、创建或更新时间、搜索条件过滤。 |
+
+**其他**
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `chatlunaTool` | `false` | 为 ChatLuna 提供只读的插件市场查询工具。 |
+| `logLevel` | `warn` | 日志级别：`silent`、`error`、`warn`、`info`、`debug`。 |
+
+忽略更新的默认天数（`updateIgnoreDays`）、卸载时是否删除配置（`removeConfig`）等选项由控制台页面写入，配置页上不显示。批量操作模式和依赖分组的折叠状态保存在 `data/market-next.json`，不会写进 `koishi.yml`。
 
 </details>
 
@@ -329,7 +347,7 @@ Market Next 会尽量减少误操作，但它不是沙盒，也不会扫描恶�
 <summary><b>插件市场一直在加载</b></summary>
 <br>
 
-第一次使用、或者缓存不可用时，需要下载完整的市场索引。可以把 `search.logLevel` 临时改成 `debug`，在日志页查看实际用的源、HTTP 状态和耗时；也可以换一个能访问的 `search.endpoint`。
+第一次使用、或者缓存不可用时，需要下载完整的市场索引。可以把 `logLevel` 临时改成 `debug`，在日志页查看实际用的源、HTTP 状态和耗时；也可以换一个能访问的 `search.endpoint`。
 
 </details>
 

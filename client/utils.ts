@@ -17,6 +17,8 @@ export type { IgnoredUpdates, UpdateIgnoreRule } from '../src/shared/update'
 
 export const active = ref('')
 
+export const day = 24 * 60 * 60 * 1000
+
 export type FrontendMode = 'performance' | 'polished'
 export type LayoutMode = 'grid' | 'list'
 
@@ -33,7 +35,6 @@ export interface MarketNextConfigPatch extends UpdatePolicy {
   idleProbeDelayMinutes?: number
   idleProbeBootDelayMinutes?: number
   idleProbeIntervalHours?: number
-  bulkMode?: boolean
   removeConfig?: boolean
   bundleRecords?: Record<string, any>
 }
@@ -83,7 +84,7 @@ export interface UpdateIgnoreOptions {
 export interface UpdatePolicy {
   updateIgnored?: IgnoredUpdates
   updateIgnoredPackages?: string
-  updateIgnoreDuration?: number
+  updateIgnoreDays?: number
   updateIgnoreVersions?: number
   updateIgnorePrerelease?: boolean
 }
@@ -93,6 +94,7 @@ export interface MarketNextDataStore {
   updateIgnored?: IgnoredUpdates
   bundleRecords?: Record<string, any>
   collapsedGroups?: Record<string, boolean>
+  bulkMode?: boolean
 }
 
 const fallbackMarketData = reactive<MarketNextDataStore>({
@@ -258,7 +260,7 @@ export function getMarketNextPolicy(fallback?: { market?: UpdatePolicy }): Updat
   return {
     ...pickExisting(pluginConfig, [
       'updateIgnoredPackages',
-      'updateIgnoreDuration',
+      'updateIgnoreDays',
       'updateIgnoreVersions',
       'updateIgnorePrerelease',
     ] satisfies Array<keyof UpdatePolicy>),
@@ -275,12 +277,8 @@ export function getWritableMarketNextPolicy(fallback?: { market?: UpdatePolicy }
   return pluginConfig
 }
 
-export function getBulkMode(fallback?: { market?: { bulkMode?: boolean } }) {
-  const pluginConfig = getMarketNextConfig()
-  if (hasOwn(pluginConfig, 'bulkMode')) {
-    return !!pluginConfig.bulkMode
-  }
-  return false
+export function getBulkMode() {
+  return !!getMarketDataStore().bulkMode
 }
 
 export function getRemoveConfig(fallback?: { market?: { removeConfig?: boolean } }) {
@@ -375,7 +373,7 @@ export function patchMarketNextData(patch: Partial<MarketNextDataStore>) {
 export function createUpdateIgnoreRule(name: string, policy?: UpdatePolicy, options: UpdateIgnoreOptions = {}): UpdateIgnoreRule | undefined {
   const version = getLatestVersion(name, policy)
   if (!version) return
-  const duration = Math.max(0, options.duration ?? policy?.updateIgnoreDuration ?? 0)
+  const duration = Math.max(0, options.duration ?? (policy?.updateIgnoreDays ?? 0) * day)
   const count = normalizeUpdateIgnoreCount(options.count ?? policy?.updateIgnoreVersions)
   const now = Date.now()
   return {

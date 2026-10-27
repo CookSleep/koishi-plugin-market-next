@@ -24,7 +24,7 @@ export interface Config {
   bulkMode?: boolean
   removeConfig?: boolean
   updateIgnoredPackages?: string
-  updateIgnoreDuration?: number
+  updateIgnoreDays?: number
   updateIgnoreVersions?: number
   updateIgnorePrerelease?: boolean
   collapsedGroups?: Dict<boolean>
@@ -69,61 +69,84 @@ interface MarketSilentRule {
   enabled?: boolean
 }
 
-const MarketSilentRuleType = Schema.union([
-  Schema.const('preview').description('状态：预览版插件'),
-  Schema.const('insecure').description('状态：不安全插件'),
-  Schema.const('bundle').description('状态：插件包'),
-  Schema.const('created-before').description('创建时间：早于指定日期'),
-  Schema.const('created-after').description('创建时间：晚于指定日期'),
-  Schema.const('updated-before').description('更新时间：早于指定日期'),
-  Schema.const('updated-after').description('更新时间：晚于指定日期'),
-  Schema.const('created-within').description('创建时间：最近 N 天内'),
-  Schema.const('updated-within').description('更新时间：最近 N 天内'),
-  Schema.const('custom').description('自定义高级条件'),
-])
-
 const MarketSilentRules = Schema.array(Schema.object({
-  type: MarketSilentRuleType.default('preview').description('规则类型'),
-  value: Schema.string().default('').description('规则值。状态类留空；日期类填写 YYYY-MM-DD，例如 2024-01-01；最近 N 天填写数字，例如 30；自定义规则填写搜索条件，例如 category:adapter。'),
-  note: Schema.string().default('').description('备注'),
-  enabled: Schema.boolean().default(true).description('是否启用'),
-})).role('table').default([]).description('插件市场永久静默过滤。添加规则后，命中的插件会直接从市场页隐藏，不会显示在搜索框中。状态类不需要填写值；日期类填写 YYYY-MM-DD；最近 N 天填写数字。')
+  type: Schema.union([
+    Schema.const('preview'),
+    Schema.const('insecure'),
+    Schema.const('bundle'),
+    Schema.const('created-before'),
+    Schema.const('created-after'),
+    Schema.const('updated-before'),
+    Schema.const('updated-after'),
+    Schema.const('created-within'),
+    Schema.const('updated-within'),
+    Schema.const('custom'),
+  ]).default('preview'),
+  value: Schema.string().default(''),
+  note: Schema.string().default(''),
+  enabled: Schema.boolean().default(true),
+})).role('table').default([])
 
-export const Config: Schema<Config> = Schema.object({
-  frontendMode: Schema.union([
-    Schema.const('performance').description('性能模式'),
-    Schema.const('polished').description('精致模式'),
-  ]).role('radio').default('performance').description('Frontend display mode.'),
-  depsLayout: Schema.union([
-    Schema.const('grid').description('网格'),
-    Schema.const('list').description('列表'),
-  ]).role('radio').default('grid').description('Dependencies page layout.'),
-  idleProbe: Schema.boolean().default(true).description('Run dependency and market metadata probes while Console is idle.'),
-  idleProbeDelayMinutes: Schema.number().min(0).default(5).description('How long Console must stay idle before the background probe starts, in minutes.'),
-  idleProbeBootDelayMinutes: Schema.number().min(0).default(1).description('Minimum delay after startup before idle probing is allowed, in minutes.'),
-  idleProbeIntervalHours: Schema.number().min(0).default(6).description('Minimum interval between idle background probes, in hours.'),
-  bulkMode: Schema.boolean().default(false).hidden().description('Batch operation mode for dependency changes.'),
-  removeConfig: Schema.union([
-    Schema.const(undefined).description('Ask every time'),
-    Schema.const(true).description('Always remove plugin config'),
-    Schema.const(false).description('Never remove plugin config'),
-  ]).hidden().description('Whether to remove existing plugin config when uninstalling a plugin.'),
-  updateIgnoredPackages: Schema.string().role('textarea').hidden().description('Dependency package names that should not be checked for updates. One package per line, or separated by commas.'),
-  updateIgnoreDuration: Schema.number().role('time').default(0).hidden().description('Default duration for ignoring one update. 0 means no time-based expiry.'),
-  updateIgnoreVersions: Schema.number().min(1).max(20).step(1).default(1).hidden().description('How many consecutive newer versions should be ignored after ignoring one update.'),
-  updateIgnorePrerelease: Schema.boolean().default(false).hidden().description('Ignore alpha, beta, rc and other prerelease versions when checking updates.'),
-  collapsedGroups: Schema.dict(Boolean).hidden(),
-  logLevel: Schema.union(logLevels.map(level => Schema.const(level))).default('warn').description('Log level for market and package operations. silent disables logs; debug enables detailed logs.'),
-  registry: Installer.Config,
-  search: MarketProvider.Config,
-  chatlunaTool: Schema.boolean().default(false).description('Enable the ChatLuna plugin market query tool. Requires ChatLuna to be installed and enabled separately.'),
-  marketSilentFilters: Schema.string().role('textarea').hidden().description('Legacy permanent silent filters.'),
-  marketSilentStatusRules: Schema.array(Schema.any()).hidden(),
-  marketSilentDateRules: Schema.array(Schema.any()).hidden(),
-  marketSilentRecentRules: Schema.array(Schema.any()).hidden(),
-  marketSilentCustomRules: Schema.array(Schema.any()).hidden(),
-  marketSilentRules: MarketSilentRules,
-}).i18n({
+// Each object below is one section of the config page; the section titles live in the locale files.
+export const Config: Schema<Config> = Schema.intersect([
+  Schema.object({
+    frontendMode: Schema.union([
+      Schema.const('performance'),
+      Schema.const('polished'),
+    ]).role('radio').default('performance'),
+    depsLayout: Schema.union([
+      Schema.const('grid'),
+      Schema.const('list'),
+    ]).role('radio').default('grid'),
+  }),
+  Schema.intersect([
+    Schema.object({
+      idleProbe: Schema.boolean().default(true),
+    }),
+    Schema.union([
+      Schema.object({
+        idleProbe: Schema.const(false).required(),
+      }),
+      Schema.object({
+        idleProbeDelayMinutes: Schema.number().min(0).default(5),
+        idleProbeBootDelayMinutes: Schema.number().min(0).default(1),
+        idleProbeIntervalHours: Schema.number().min(0).default(6),
+      }),
+    ]),
+  ]),
+  Schema.object({
+    registry: Installer.Config,
+  }),
+  Schema.object({
+    search: MarketProvider.Config,
+  }),
+  Schema.object({
+    marketSilentRules: MarketSilentRules,
+  }),
+  Schema.object({
+    chatlunaTool: Schema.boolean().default(false),
+    logLevel: Schema.union(logLevels.map(level => Schema.const(level))).default('warn'),
+  }),
+  // Written by the console pages rather than edited here.
+  Schema.object({
+    bulkMode: Schema.boolean().hidden(),
+    removeConfig: Schema.union([
+      Schema.const(undefined),
+      Schema.const(true),
+      Schema.const(false),
+    ]).hidden(),
+    updateIgnoredPackages: Schema.string().role('textarea').hidden(),
+    updateIgnoreDays: Schema.number().min(0).default(0).hidden(),
+    updateIgnoreVersions: Schema.number().min(1).max(20).step(1).default(1).hidden(),
+    updateIgnorePrerelease: Schema.boolean().default(false).hidden(),
+    collapsedGroups: Schema.dict(Boolean).hidden(),
+    marketSilentFilters: Schema.string().role('textarea').hidden(),
+    marketSilentStatusRules: Schema.array(Schema.any()).hidden(),
+    marketSilentDateRules: Schema.array(Schema.any()).hidden(),
+    marketSilentRecentRules: Schema.array(Schema.any()).hidden(),
+    marketSilentCustomRules: Schema.array(Schema.any()).hidden(),
+  }),
+]).i18n({
   'zh-CN': require('./locales/schema.zh-CN'),
   'en-US': require('./locales/schema.en-US'),
 })
@@ -142,10 +165,9 @@ const configPatchKeys: Array<keyof Config> = [
   'idleProbeDelayMinutes',
   'idleProbeBootDelayMinutes',
   'idleProbeIntervalHours',
-  'bulkMode',
   'removeConfig',
   'updateIgnoredPackages',
-  'updateIgnoreDuration',
+  'updateIgnoreDays',
   'updateIgnoreVersions',
   'updateIgnorePrerelease',
 ]
@@ -158,14 +180,32 @@ const configReloadKeys = new Set<keyof Config>([
   'idleProbeIntervalHours',
 ])
 
-// Time options used to be stored in milliseconds. They are now stored in the
-// unit shown in the config page, and old keys are converted once on startup.
-const legacyTimeOptions: Array<[path: '' | 'registry' | 'search', from: string, to: string, unit: number]> = [
-  ['', 'idleProbeDelay', 'idleProbeDelayMinutes', Time.minute],
-  ['', 'idleProbeBootDelay', 'idleProbeBootDelayMinutes', Time.minute],
-  ['', 'idleProbeInterval', 'idleProbeIntervalHours', Time.hour],
-  ['registry', 'timeout', 'timeoutSeconds', Time.second],
-  ['search', 'timeout', 'timeoutSeconds', Time.second],
+interface LegacyTimeOption {
+  path: '' | 'registry' | 'search'
+  from: string
+  to: string
+  /** How many old units make one new unit. */
+  unit: number
+  /** Smallest allowed value for anything above 0. */
+  min?: number
+  /** Largest allowed value; also rounds to a whole number, matching a step(1) schema. */
+  max?: number
+  /** What a legacy 0 becomes; undefined falls back to the schema default. */
+  zero?: number
+}
+
+// Time options used to be stored in milliseconds (or hours). They are now stored in
+// the unit shown on the config page, and old keys are converted once on startup.
+const legacyTimeOptions: LegacyTimeOption[] = [
+  { path: '', from: 'idleProbeDelay', to: 'idleProbeDelayMinutes', unit: Time.minute, zero: 0 },
+  { path: '', from: 'idleProbeBootDelay', to: 'idleProbeBootDelayMinutes', unit: Time.minute, zero: 0 },
+  { path: '', from: 'idleProbeInterval', to: 'idleProbeIntervalHours', unit: Time.hour, zero: 0 },
+  { path: '', from: 'updateIgnoreDuration', to: 'updateIgnoreDays', unit: Time.day, zero: 0 },
+  // A timeout of 0 means no limit, so it has to stay 0 rather than be rounded up.
+  { path: 'registry', from: 'timeout', to: 'timeoutSeconds', unit: Time.second, min: 1, zero: 0 },
+  { path: 'search', from: 'timeout', to: 'timeoutSeconds', unit: Time.second, min: 1, zero: 0 },
+  { path: 'registry', from: 'installLogRetentionHours', to: 'installLogRetentionDays', unit: Time.day / Time.hour, min: 1, max: 365 },
+  { path: 'registry', from: 'installLogRetention', to: 'installLogRetentionDays', unit: Time.day, min: 1, max: 365 },
 ]
 
 function findMarketNextConfigNode(plugins: any, currentConfig: Config): { parent: any, key: string, value: any } | undefined {
@@ -205,26 +245,43 @@ export function ensureMarketNextConfigDefaults(ctx: Context, currentConfig: Conf
     delete target.value.marketLayout
     changed = true
   }
-  for (const [path, from, to, unit] of legacyTimeOptions) {
+  for (const { path, from, to, unit, min = 0, max, zero } of legacyTimeOptions) {
     const raw = path ? target.value[path] : target.value
     if (typeof raw?.[from] !== 'number') continue
-    const value = Math.max(0, Number((raw[from] / unit).toFixed(4)))
-    // 0 keeps its old meaning; other sub-second timeouts are rounded up to the schema minimum.
-    raw[to] ??= unit === Time.second && value > 0 ? Math.max(1, value) : value
+    const value = Number((raw[from] / unit).toFixed(4))
+    const clamped = max ? Math.min(max, Math.max(min, Math.round(value))) : Math.max(min, value)
+    raw[to] ??= value > 0 ? clamped : zero
+    if (raw[to] === undefined) delete raw[to]
     delete raw[from]
     // The running config was parsed before the conversion, so it only has the defaults.
     const current = path ? currentConfig[path] ??= {} : currentConfig
-    current[to] = raw[to]
+    if (raw[to] !== undefined) current[to] = raw[to]
+    changed = true
+  }
+  // search.logLevel was an older, narrower copy of the top-level log level.
+  const search = target.value.search
+  if (search && Object.prototype.hasOwnProperty.call(search, 'logLevel')) {
+    if (logLevels.includes(search.logLevel)) target.value.logLevel ??= search.logLevel
+    if (target.value.logLevel) currentConfig.logLevel = target.value.logLevel
+    delete search.logLevel
     changed = true
   }
   return changed
 }
 
-export function removeLegacyCollapsedGroupsConfig(ctx: Context, currentConfig: Config) {
+// These now live in data/market-next.json and are removed from koishi.yml once migrated.
+export function removeMigratedConfigKeys(ctx: Context, currentConfig: Config) {
   const target = findMarketNextConfigNode(ctx.loader.config?.plugins, currentConfig)
-  if (!target || !Object.prototype.hasOwnProperty.call(target.value, 'collapsedGroups')) return false
-  delete target.value.collapsedGroups
-  return true
+  if (!target) return false
+  let changed = false
+  for (const key of ['collapsedGroups', 'bulkMode'] as const) {
+    // The running config keeps its parsed copy, which a later migration would read again.
+    delete currentConfig[key]
+    if (!Object.prototype.hasOwnProperty.call(target.value, key)) continue
+    delete target.value[key]
+    changed = true
+  }
+  return changed
 }
 
 export async function updateMarketNextConfig(ctx: Context, currentConfig: Config, patch: Partial<Config>) {

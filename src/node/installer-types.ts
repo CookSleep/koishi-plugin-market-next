@@ -17,9 +17,7 @@ export interface InstallerConfig {
   autoRoute?: boolean
   retry?: number
   concurrency?: number
-  installLogRetentionHours?: number
-  /** @deprecated use installLogRetentionHours */
-  installLogRetention?: number
+  installLogRetentionDays?: number
 }
 
 export interface InstallerGetDepsOptions {

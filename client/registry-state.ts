@@ -29,10 +29,9 @@ declare module '@koishijs/client' {
 }
 
 interface MarketConfig {
-  bulkMode?: boolean
   removeConfig?: boolean
   updateIgnoredPackages?: string
-  updateIgnoreDuration?: number
+  updateIgnoreDays?: number
   updateIgnoreVersions?: number
   updateIgnorePrerelease?: boolean
   gravatar?: string

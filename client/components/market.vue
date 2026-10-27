@@ -125,7 +125,7 @@
 
 import { router, store, global, useConfig } from '@koishijs/client'
 import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
-import { active, getFrontendMode, getMarketSilentFilters, getMarketSilentRules, getPendingOverrides } from '../utils'
+import { active, getFrontendMode, getMarketNextConfig, getMarketSilentFilters, getMarketSilentRules, getPendingOverrides } from '../utils'
 import { getSilentFiltered, getVisible, kConfig, MarketFilter, MarketList, MarketSearch, parseSilentFilters } from '../market'
 import { SearchObject } from '@koishijs/registry'
 import { activeBundle } from './utils'
@@ -232,17 +232,17 @@ const loadingSlow = ref(false)
 let loadingTimer: ReturnType<typeof setTimeout>
 
 const loadingEndpoint = computed(() => {
-  return store.market?.registry || config.value.market?.search?.endpoint || 'https://registry.koishi.t4wefan.pub/index.json'
+  return store.market?.registry || getMarketNextConfig()?.search?.endpoint || 'https://registry.koishi.t4wefan.pub/index.json'
 })
 
 const loadingTimeout = computed(() => {
-  const seconds = config.value.market?.search?.timeoutSeconds
+  const seconds = getMarketNextConfig()?.search?.timeoutSeconds
   return seconds ? `${seconds}s` : ''
 })
 
-const loadingAutoRoute = computed(() => config.value.market?.search?.autoRoute !== false)
+const loadingAutoRoute = computed(() => getMarketNextConfig()?.search?.autoRoute !== false)
 
-const showMarketCacheHint = computed(() => config.value.market?.search?.logLevel !== 'silent')
+const showMarketCacheHint = computed(() => getMarketNextConfig()?.logLevel !== 'silent')
 
 const debugItems = computed(() => {
   const debug = store.market?.debug

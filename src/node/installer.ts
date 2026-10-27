@@ -804,7 +804,7 @@ namespace Installer {
     autoRoute: Schema.boolean().default(true),
     retry: Schema.number().min(0).max(5).step(1).default(1),
     concurrency: Schema.number().min(1).max(16).step(1).default(4),
-    installLogRetentionHours: Schema.number().min(1).max(24 * 365).step(1).default(72),
+    installLogRetentionDays: Schema.number().min(1).max(365).step(1).default(3),
   }) // TODO .hidden()
 }
 

@@ -46,7 +46,6 @@ export interface MarketProviderConfig {
   timeout?: number
   proxyAgent?: string
   autoRoute?: boolean
-  logLevel?: LogLevel
 }
 
 export interface CacheFile {

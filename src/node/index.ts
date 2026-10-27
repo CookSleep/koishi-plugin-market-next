@@ -40,7 +40,7 @@ import {
 import {
   Config,
   ensureMarketNextConfigDefaults,
-  removeLegacyCollapsedGroupsConfig,
+  removeMigratedConfigKeys,
 } from './config'
 import { MarketSnapshotTransport } from './market-snapshot'
 import {
@@ -120,23 +120,14 @@ export const name = 'market'
 export const inject = ['http']
 
 export const usage = `
-如果插件市场页面提示「无法连接到插件市场」，则可以选择一个 Koishi 社区提供的镜像地址，填入下方对应的配置项中。
+插件市场打不开时，可以把下方的 search.endpoint 换成其他镜像：
 
-## 插件市场（填入 search.endpoint）
-
-- Koishi（全球）：https://registry.koishi.chat/index.json
+- [t4wefan](https://k.ilharp.cc/2611)（大陆，默认）：https://registry.koishi.t4wefan.pub/index.json
 - [Gitee 聚合](https://k.ilharp.cc/4000)（大陆）：https://gitee.com/shangxueink/koishi-registry-aggregator/raw/gh-pages/market.json
-- [t4wefan](https://k.ilharp.cc/2611)（大陆）：https://registry.koishi.t4wefan.pub/index.json
-- [Lipraty](https://k.ilharp.cc/3530)（大陆）：https://koi.nyan.zone/registry/index.json
+- Koishi 官方（全球）：https://registry.koishi.chat/index.json
 - [itzdrli](https://k.ilharp.cc/9975)（全球）：https://kp.itzdrli.cc
-- itzdrli 备用：https://koishi.itzdrli.cc
-- Koishi Registry GitHub Pages：https://koishijs.github.io/registry/index.json
-- Koishi Registry GitHub Raw：https://raw.githubusercontent.com/koishijs/registry/release/index.json
-- Koishi Registry jsDelivr：https://cdn.jsdelivr.net/gh/koishijs/registry@release/index.json
-- Koishi Registry GitHub 代理：https://ghproxy.net/https://raw.githubusercontent.com/koishijs/registry/release/index.json
-- Koishi Registry GitHub 代理 2：https://ghfast.top/https://raw.githubusercontent.com/koishijs/registry/release/index.json
 
-要浏览更多社区镜像，请访问 [Koishi 论坛上的镜像一览](https://k.ilharp.cc/4000)。`
+更多镜像见 [Koishi 论坛上的镜像一览](https://k.ilharp.cc/4000)。`
 
 // ## 软件源（填入 npmRegistryServer）
 
@@ -147,9 +138,6 @@ export const usage = `
 // - cnpm：https://r.cnpmjs.org
 
 export function apply(ctx: Context, config: Config = {}) {
-  const effectiveLogLevel = config.logLevel ?? config.search?.logLevel ?? 'warn'
-  setLogLevel(effectiveLogLevel)
-
   if (!ctx.loader?.writable) {
     return ctx.logger('app').warn('koishi-plugin-market-next is only available for json/yaml config file')
   }
@@ -160,6 +148,7 @@ export function apply(ctx: Context, config: Config = {}) {
       .then(() => ctx.get('console')?.refresh('config'))
       .catch(error => logger.warn(error))
   }
+  setLogLevel(config.logLevel)
 
   applyChatLunaTool(ctx, config)
 
@@ -212,7 +201,7 @@ export function apply(ctx: Context, config: Config = {}) {
     ctx.on('ready', () => {
       void dataStore.migrateFromConfig(config)
         .then(() => {
-          if (!removeLegacyCollapsedGroupsConfig(ctx, config)) return
+          if (!removeMigratedConfigKeys(ctx, config)) return
           return ctx.loader.writeConfig(true)
             .then(() => ctx.get('console')?.refresh('config'))
         })

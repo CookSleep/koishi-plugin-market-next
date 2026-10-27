@@ -161,7 +161,7 @@ import { message, send, store, useConfig, useContext } from '@koishijs/client'
 import type { SearchObject } from '@koishijs/registry'
 import { isBundlePackageName, PLUGIN_PACKAGE_RE } from '../../src/shared/bundle'
 import { isLocalDependency } from '../../src/shared/dependency-source'
-import { createUpdateIgnoreRule, getBundleRecords, getFrontendMode, getIgnoredUpdateVersion, getLatestVersion, getMarketNextPolicy, getPendingOverrides, getWritableMarketNextPolicy, getUpdateIgnoreText, hasUpdate, isUpdateCheckDisabled, isUpdateIgnored, patchMarketNextConfig, patchMarketNextData } from '../utils'
+import { createUpdateIgnoreRule, day, getBundleRecords, getFrontendMode, getIgnoredUpdateVersion, getLatestVersion, getMarketNextPolicy, getPendingOverrides, getWritableMarketNextPolicy, getUpdateIgnoreText, hasUpdate, isUpdateCheckDisabled, isUpdateIgnored, patchMarketNextConfig, patchMarketNextData } from '../utils'
 import { activeBundle, analyzeVersions, createLocalBundleRecord, ensureInstalledConfig, expandedDependency, formatEndpoint, formatShortname, getConfigWriter, getRegistryStatus, getRegistryStatusText, pendingBundleUninstalls } from './utils'
 import { resolveCategory } from '../market/utils'
 import MarketIcon from '../market/icons'
@@ -180,7 +180,6 @@ const props = defineProps<{
 }>()
 
 const removeValue = '__market_next_remove__'
-const day = 24 * 60 * 60 * 1000
 const config = useConfig()
 const ctx = useContext()
 const { t, locale } = useMarketNextI18n()
@@ -488,7 +487,7 @@ async function confirmLocalBinding() {
 
 function openIgnoreDialog() {
   const policy = getMarketNextPolicy(config.value)
-  const duration = Math.max(0, policy.updateIgnoreDuration ?? 0)
+  const duration = Math.max(0, policy.updateIgnoreDays ?? 0) * day
   ignoreDurationPreset.value = duration === 0 ? 'forever'
     : duration === day ? '1d'
     : duration === 7 * day ? '7d'
@@ -545,7 +544,7 @@ async function persistUpdatePolicy() {
   const policy = getMarketNextPolicy(config.value)
   const configSaved = await patchMarketNextConfig({
     updateIgnoredPackages: policy.updateIgnoredPackages,
-    updateIgnoreDuration: policy.updateIgnoreDuration,
+    updateIgnoreDays: policy.updateIgnoreDays,
     updateIgnoreVersions: policy.updateIgnoreVersions,
     updateIgnorePrerelease: policy.updateIgnorePrerelease,
   })

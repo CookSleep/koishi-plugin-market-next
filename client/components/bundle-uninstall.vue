@@ -253,7 +253,7 @@ async function uninstallBundle() {
     ...Object.fromEntries(members.map(name => [name, ''])),
   }
 
-  if (getBulkMode(config.value)) {
+  if (getBulkMode()) {
     const overrides = ensureOverride()
     Object.assign(overrides, override)
     void patchMarketNextData({ override: { ...overrides } })

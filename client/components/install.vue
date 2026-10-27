@@ -151,10 +151,9 @@ const showBundleUninstallDialog = ref(false)
 const bundleUninstallTarget = ref('')
 
 const bulkMode = computed({
-  get: () => getBulkMode(config.value),
+  get: () => getBulkMode(),
   set: (value: boolean) => {
-    if (config.value.market) config.value.market.bulkMode = value
-    void patchMarketNextConfig({ bulkMode: value })
+    void patchMarketNextData({ bulkMode: value })
   },
 })
 

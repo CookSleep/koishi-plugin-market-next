@@ -136,7 +136,7 @@ async function requestUninstall() {
     showBundleUninstallDialog.value = true
     return
   }
-  if (getBulkMode(config.value)) {
+  if (getBulkMode()) {
     const override = ensureOverride()
     override[name.value] = ''
     void patchMarketNextData({ override: { ...override } })
