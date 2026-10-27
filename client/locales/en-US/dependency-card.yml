@@ -62,6 +62,12 @@ actions:
   uninstall: Uninstall
   uninstallBundle: Uninstall bundle
   bindLocal: Bind local source
+picker:
+  placeholder: Pick a version
+  current: Current
+  latest: Latest
+  prerelease: Pre-release
+  incompatible: Incompatible with installed dependencies, or deprecated
 localBinding:
   title: Bind Local Plugin Source
   description: Create a local archive from the currently loaded {name} package and stage that source for this dependency.

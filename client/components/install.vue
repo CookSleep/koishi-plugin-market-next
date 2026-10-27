@@ -4,19 +4,15 @@
       <span :id="titleId" :class="titleClass">
         {{ active + (localSelection ? ` (${t('dependencyCard.current.local')})` : '') }}
       </span>
-      <el-select
+      <version-picker
         v-if="data"
         v-model="selectVersion"
-        class="market-version-select"
+        :versions="data"
+        :current="current"
+        :latest="Object.keys(data).find(item => !item.includes('-'))"
         :disabled="localSelection"
-        :popper-class="versionPopperClass"
-      >
-        <el-option v-for="({ result }, version) in data" :key="version" :value="version">
-          {{ version }}
-          <template v-if="version === current">{{ t('dependencyCard.actions.current') }}</template>
-          <span :class="[result, 'theme-color', 'dot-hint']"></span>
-        </el-option>
-      </el-select>
+        :mode-class="modeClass"
+      ></version-picker>
     </template>
 
     <k-comment class="danger" v-if="danger" type="danger">{{ danger }}</k-comment>
@@ -49,24 +45,19 @@
         <tbody>
           <tr v-for="(peer, name) in data[version].peers" :key="name">
             <td class="text-left">{{ name }}</td>
-            <td>{{ peer.request }}</td>
+            <td :data-label="t('operations.install.peerRange')">{{ peer.request }}</td>
             <td>
-              <span class="wrapper" v-if="shouldShowPeerVersionSelect(peer, name)">
-                <span class="shadow">{{ getVersion(name) || t('operations.install.select') }}</span>
-                <el-select
-                  class="frameless market-version-select"
-                  :model-value="getVersion(name)"
-                  :popper-class="versionPopperClass"
-                  @update:model-value="setVersion(name, $event)"
-                >
-                    <el-option value="">{{ t('dependencyCard.actions.remove') }}</el-option>
-                  <el-option v-for="(_, version) in store.registry[name]" :key="version" :value="version">
-                    {{ version }}
-                    <template v-if="version === current">{{ t('dependencyCard.actions.current') }}</template>
-                    <!-- <span :class="[result, 'theme-color', 'dot-hint']"></span> -->
-                  </el-option>
-                </el-select>
-              </span>
+              <version-picker
+                v-if="shouldShowPeerVersionSelect(peer, name)"
+                :model-value="getVersion(name)"
+                :versions="store.registry[name]"
+                :current="store.dependencies?.[name]?.resolved"
+                :latest="Object.keys(store.registry[name]).find(item => !item.includes('-'))"
+                :placeholder="t('operations.install.select')"
+                removable
+                :mode-class="modeClass"
+                @update:model-value="setVersion(name, $event)"
+              ></version-picker>
               <span v-else class="peer-version" :class="{ workspace: !!getWorkspaceVersion(name), missing: !getPeerResolvedVersion(peer, name) }">
                 {{ getPeerResolvedVersion(peer, name) || t('operations.confirm.notInstalled') }}
                 <template v-if="getWorkspaceVersion(name)">{{ t('dependencyCard.current.workspace') }}</template>
@@ -143,6 +134,7 @@ import { parse } from 'semver'
 import { isBundlePackageName } from '../../src/shared/bundle'
 import { isLocalDependency } from '../../src/shared/dependency-source'
 import BundleUninstall from './bundle-uninstall.vue'
+import VersionPicker from './version-picker.vue'
 import { useMarketNextI18n } from '../i18n'
 import { getMarketObject } from '../market/state'
 
@@ -151,7 +143,6 @@ const config = useConfig()
 const { t } = useMarketNextI18n()
 const frontendMode = computed(() => getFrontendMode(config.value))
 const modeClass = computed(() => `market-mode-${frontendMode.value}`)
-const versionPopperClass = computed(() => `market-version-popper ${modeClass.value}`)
 
 const saveChoice = ref(false)
 const showRemoveDialog = ref(false)
@@ -466,11 +457,6 @@ function getResultText(peer: PeerInfo, name: string) {
       min-width: 0;
       overflow-wrap: anywhere;
     }
-
-    .el-select {
-      flex: 1 1 auto;
-      max-width: 12.5rem;
-    }
   }
 
   .warning {
@@ -503,6 +489,12 @@ function getResultText(peer: PeerInfo, name: string) {
     td:first-child {
       white-space: normal;
       overflow-wrap: anywhere;
+    }
+
+    // The version picker is wider than plain versions, so this column is centered to line it up with its header.
+    td:nth-child(3),
+    th:nth-child(3) {
+      text-align: center;
     }
 
     thead th {
@@ -538,26 +530,6 @@ function getResultText(peer: PeerInfo, name: string) {
       margin-left: 0;
     }
   }
-
-  .wrapper {
-    position: relative;
-    display: inline-flex;
-    min-width: 7.5rem;
-
-    .shadow {
-      letter-spacing: 1px;
-      visibility: hidden;
-      padding-right: 22px; // .el-input__suffix
-    }
-
-    .el-select {
-      position: absolute;
-      left: 0;
-      top: 50%;
-      right: 0;
-      transform: translateY(-50%);
-    }
-  }
 }
 
 .market-remove-dialog .el-dialog__footer {
@@ -576,28 +548,64 @@ function getResultText(peer: PeerInfo, name: string) {
 }
 
 @media (max-width: 768px) {
-  .install-panel .el-dialog__header .el-select {
-    max-width: none;
-  }
+  // Each peer becomes a two-line block: name and availability, then range and current version.
+  .install-panel .peer-table {
+    display: block;
 
-  .install-panel table td,
-  .install-panel table th {
-    padding: 0.5rem;
-    white-space: normal;
-  }
-}
+    colgroup,
+    thead {
+      display: none;
+    }
 
-.dot-hint::before {
-  content: '';
-  position: absolute;
-  border-radius: 100%;
-  width: 0.5rem;
-  height: 0.5rem;
-  top: 50%;
-  right: 20px;
-  transform: translate(0, -50%);
-  background-color: currentColor;
-  transition: background-color 0.3s ease;
+    tbody {
+      display: block;
+    }
+
+    tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.25rem 0.75rem;
+      align-items: center;
+      padding: 0.625rem 0.875rem;
+      // Koishi's global table rules put borders on tr, which only show once it stops being a table row.
+      border: 0;
+
+      & + tr {
+        border-top: 1px solid var(--k-color-divider);
+      }
+    }
+
+    td {
+      padding: 0;
+      border-top: 0;
+    }
+
+    // The name leads the block, so it is a step larger than the status beside it.
+    td:nth-child(1) {
+      font-size: 0.9375rem;
+      font-weight: 500;
+    }
+
+    td:nth-child(2) {
+      color: var(--fg2);
+      font-size: 0.875rem;
+
+      &::before {
+        content: attr(data-label) ' ';
+        color: var(--fg3);
+      }
+    }
+
+    td:nth-child(3) {
+      grid-area: 2 / 2;
+      justify-self: end;
+    }
+
+    td:nth-child(4) {
+      grid-area: 1 / 2;
+      justify-self: end;
+    }
+  }
 }
 
 </style>

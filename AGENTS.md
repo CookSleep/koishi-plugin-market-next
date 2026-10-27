@@ -112,6 +112,7 @@ const title = getMarketObject(name)?.shortname ?? name
 - 保持 Koishi 的扁平风格：细边框、少量圆角、不用渐变背景、外发光、毛玻璃和大面积阴影做装饰。
 - 状态用文字或小标签表达，不要给同一信息同时配色条、图标、徽章和说明文字。
 - 空状态用 `client/components/empty-state.vue`（图标 + 标题 + 一句说明），不要只放一行灰字，也不要让弹窗留下大片空白。
+- 选择版本用 `client/components/version-picker.vue`，不要直接用 `el-select`。
 - 下拉菜单、上下文菜单的每一项都配一个图标。图标优先复用 Koishi 自带的和 `client/market/icons`，缺的放在 `client/icons/menu/`（24×24、线条风格、`stroke="currentColor"`），注册为 `market-next:<名称>`。
 - 一行里只放一到两个主要按钮，其余操作收进「更多」下拉菜单。危险操作（卸载、删除）放在菜单底部，并经过确认。
 - 弹窗统一加 `market-dialog` 类（样式在 `client/styles/dialog.scss`，负责限制最大宽度、内容区滚动和底部按钮换行），`width` 只写设计宽度（如 `width="640px"`）。不要再给弹窗的 header / body / footer 单独铺背景色。

@@ -10,37 +10,37 @@
         <span v-if="showTag" :class="['dep-tag', `is-${statusClass}`]">{{ statusLabel }}</span>
       </div>
       <span v-if="displayName !== name" class="dep-name" :title="name">{{ name }}</span>
-      <p v-if="!listMode && summaryText" class="dep-summary" :title="summaryText">{{ summaryText }}</p>
+      <!-- Rendered even when empty so every card has the same height. -->
+      <p v-if="!listMode" class="dep-summary" :title="summaryText">{{ summaryText }}</p>
     </div>
 
+    <p v-if="listMode && summaryText" class="dep-summary" :title="summaryText">{{ summaryText }}</p>
+
+    <!-- The picker takes the place of the target version, so the row keeps its shape while editing. -->
     <div class="dep-version" :title="versionTitle">
       <span>{{ currentText }}</span>
-      <template v-if="showTarget">
+      <template v-if="showPicker">
+        <span class="dep-arrow">→</span>
+        <version-picker
+          v-model="selectedVersion"
+          :versions="data"
+          :current="dep?.resolved"
+          :latest="latestVersion"
+          :removable="!!dep"
+          :pending="pending"
+          :placeholder="t('dependencyCard.picker.placeholder')"
+          :remove-value="removeValue"
+          :mode-class="modeClass"
+        ></version-picker>
+      </template>
+      <template v-else-if="showTarget">
         <span class="dep-arrow">→</span>
         <strong :class="{ 'is-remove': pendingRemove }">{{ targetText }}</strong>
       </template>
+      <span v-if="showVersionControl && !data" class="dep-muted">{{ compactStatusText }}</span>
     </div>
 
     <p v-if="showDetailText" :class="['dep-detail', { 'is-danger': statusClass === 'error' }]">{{ detailText }}</p>
-
-    <div v-if="showVersionControl" class="dep-picker">
-      <el-select
-        v-if="data"
-        v-model="selectedVersion"
-        size="small"
-        class="dep-select market-version-select"
-        :class="{ pending }"
-        :popper-class="`market-version-popper ${modeClass}`"
-      >
-        <el-option v-if="dep" :value="removeValue">{{ t('dependencyCard.actions.remove') }}</el-option>
-        <el-option v-for="({ result }, version) in data" :key="version" :value="version">
-          {{ version }}
-          <template v-if="version === dep?.resolved">{{ t('dependencyCard.actions.current') }}</template>
-          <span :class="[result, 'theme-color', 'dot-hint']"></span>
-        </el-option>
-      </el-select>
-      <span v-else class="dep-muted">{{ compactStatusText }}</span>
-    </div>
 
     <div v-if="showActions" class="dep-actions">
       <el-button v-if="pending" size="small" @click="clearOverride">{{ t('dependencyCard.actions.undo') }}</el-button>
@@ -167,6 +167,7 @@ import { resolveCategory } from '../market/utils'
 import MarketIcon from '../market/icons'
 import BundleUninstall from './bundle-uninstall.vue'
 import PackageHistory from './package-history.vue'
+import VersionPicker from './version-picker.vue'
 import { useMarketNextI18n } from '../i18n'
 import { getMarketObject } from '../market/state'
 
@@ -359,7 +360,6 @@ const compactStatusText = computed(() => {
 })
 
 const summaryText = computed(() => {
-  if (statusClass.value !== 'installed') return ''
   const market = getMarketObject(props.name)
   const keys = locale.value.toLowerCase().startsWith('zh') ? ['zh-CN', 'zh', 'en-US', 'en'] : ['en-US', 'en', 'zh-CN', 'zh']
   for (const value of [market?.manifest?.description, market?.package?.description, local.value?.package?.description]) {
@@ -386,6 +386,8 @@ const showVersionControl = computed(() => {
   if (!data.value && !status.value?.error) return false
   return editing.value || pending.value || statusClass.value === 'error' || statusClass.value === 'manual'
 })
+
+const showPicker = computed(() => showVersionControl.value && !!data.value)
 
 const showManageBundle = computed(() => bundlePackage.value && !!(dep.value || local.value) && !pending.value)
 
@@ -729,7 +731,7 @@ async function configure() {
 }
 
 .dep-summary {
-  margin: 0.25rem 0 0;
+  margin: 0;
   color: var(--fg2);
   font-size: 0.8125rem;
   line-height: 1.5;
@@ -747,6 +749,11 @@ async function configure() {
   color: var(--fg2);
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
+
+  > span,
+  strong {
+    white-space: nowrap;
+  }
 
   strong {
     color: var(--fg1);
@@ -793,16 +800,6 @@ async function configure() {
   }
 }
 
-.dep-picker {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-
-  .el-select {
-    width: 100%;
-  }
-}
-
 .dep-muted {
   color: var(--fg3);
   font-size: 0.8125rem;
@@ -821,26 +818,29 @@ async function configure() {
 .dep-main { grid-area: main; }
 .dep-version { grid-area: version; }
 .dep-detail { grid-area: detail; }
-.dep-picker { grid-area: picker; }
 .dep-actions { grid-area: actions; }
 .dep-menu {
   grid-area: menu;
   justify-self: end;
 }
 
-.is-card {
+.is-row > .dep-summary { grid-area: summary; }
+
+.is-card .dep-summary {
+  min-height: 1.5em;
+  margin-top: 0.25rem;
+}
+
+@mixin card-layout {
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) auto;
   grid-template-areas:
     'icon main menu'
     'icon version actions'
-    'icon detail detail'
-    'icon picker picker';
+    'icon detail detail';
   column-gap: 0.75rem;
   align-content: start;
   align-items: center;
-  border: 1px solid var(--k-color-border);
-  border-radius: 8px;
   padding: 0.75rem 0.875rem;
 
   .dep-icon,
@@ -851,56 +851,47 @@ async function configure() {
   // Empty grid rows would still add a gap, so spacing goes on the items.
   .dep-version,
   .dep-actions,
-  .dep-detail,
-  .dep-picker {
+  .dep-detail {
     margin-top: 0.375rem;
   }
 }
 
+.is-card {
+  @include card-layout;
+  border: 1px solid var(--k-color-border);
+  border-radius: 8px;
+}
+
+// Fixed columns keep versions and buttons aligned from row to row.
 .is-row {
   display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr) minmax(8rem, 12rem) auto auto auto;
+  grid-template-columns: 2rem minmax(10rem, 2fr) minmax(0, 3fr) 14rem 7rem 2.25rem;
   grid-template-areas:
-    'icon main version picker actions menu'
+    'icon main summary version actions menu'
     'icon detail detail detail detail menu';
   column-gap: 1rem;
   align-items: center;
-  padding: 0.625rem 1rem;
+  padding: 0.5rem 1rem;
 
-  .dep-picker {
-    width: 10rem;
+  > .dep-summary {
+    color: var(--fg3);
+  }
+
+  .dep-version {
+    flex-wrap: nowrap;
   }
 
   .dep-detail {
-    margin-top: 0.25rem;
+    margin-top: 0.125rem;
   }
 }
 
 @media (max-width: 768px) {
   .is-row {
-    grid-template-columns: 2rem minmax(0, 1fr) auto;
-    grid-template-areas:
-      'icon main menu'
-      'icon version actions'
-      'icon detail detail'
-      'icon picker picker';
-    column-gap: 0.75rem;
-    padding: 0.75rem;
+    @include card-layout;
 
-    .dep-icon,
-    .dep-menu {
-      align-self: start;
-    }
-
-    .dep-version,
-    .dep-actions,
-    .dep-detail,
-    .dep-picker {
-      margin-top: 0.375rem;
-    }
-
-    .dep-picker {
-      width: auto;
+    > .dep-summary {
+      display: none;
     }
   }
 }
