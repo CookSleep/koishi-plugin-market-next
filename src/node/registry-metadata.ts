@@ -1,6 +1,6 @@
 import { Context, Dict, HTTP, Time } from 'koishi'
 import Scanner, { DependencyMetaKey, Registry, RemotePackage } from '@koishijs/registry'
-import { satisfies } from 'semver'
+import { gt, satisfies } from 'semver'
 import {
   allRegistryAttemptsNotFound,
   getRegistryAttemptReasons,
@@ -16,6 +16,13 @@ import { RegistryRouter } from './registry-router'
 import { logger } from './logger'
 const NOT_FOUND_CACHE_TTL = Time.minute * 5
 
+function filterVersions(name: string, registry: Registry) {
+  return getVersions(Object.values(registry.versions).filter((remote) => {
+    if (name === 'koishi') return satisfies(remote.version, '4')
+    return !Scanner.isPlugin(name) || Scanner.isCompatible('4', remote)
+  }))
+}
+
 export class RegistryMetadata {
   fullCache: Dict<Dict<Pick<RemotePackage, DependencyMetaKey>>> = {}
   registryStatus: Dict<RegistryStatus> = {}
@@ -24,6 +31,7 @@ export class RegistryMetadata {
   private pkgTasks: Dict<Promise<Dict<Pick<RemotePackage, DependencyMetaKey>> | undefined>> = {}
   private router: RegistryRouter
   private notFoundCache: Dict<number> = {}
+  private fetching = new Map<string, Promise<unknown>>()
   private tempRegistryStatus: Dict<RegistryStatus> = {}
   private flushData: () => void
   private flushRegistryStatus: () => void
@@ -71,6 +79,7 @@ export class RegistryMetadata {
   async reset(reason: string) {
     await this.router.reset(reason)
     this.pkgTasks = {}
+    this.fetching.clear()
     this.fullCache = {}
     this.tempCache = {}
     this.notFoundCache = {}
@@ -193,6 +202,35 @@ export class RegistryMetadata {
     this.pkgTasks[name] = Promise.resolve(this.fullCache[name])
   }
 
+  // Fetches the versions of one package again, quietly and through the normal route (the
+  // configured registry, with fallbacks only when auto routing is on and it is slow or failing).
+  // The cached versions and registry status stay as they are unless a newer release is found,
+  // and a failure only logs at debug level. The route probe payload is skipped, since it belongs
+  // to the current serial and may be stale.
+  async recheckPackage(name: string) {
+    if (this.fetching.has(name)) return this.pkgTasks[name].catch(() => undefined)
+    const serial = this.serial
+    try {
+      await this.ensureEndpoint(name, serial)
+      if (this.isStale(serial)) return
+      const { registry, endpoint } = await this.router.fetchRegistryByRoute(name, this.router.getRegistryEndpoints(), serial)
+      if (this.isStale(serial) || this.fetching.has(name)) return
+      const versions = filterVersions(name, registry)
+      const latest = Object.keys(versions)[0]
+      const known = Object.keys(this.fullCache[name] ?? {})[0]
+      if (!latest || known && !gt(latest, known)) return this.fullCache[name]
+      delete this.notFoundCache[name]
+      this.fullCache[name] = this.tempCache[name] = versions
+      this.flushData()
+      this.pkgTasks[name] = Promise.resolve(versions)
+      // An earlier failed fetch may have left an error on the card.
+      this.setRegistryStatus(name, { loading: false, error: undefined, reason: undefined, endpoint }, serial)
+      return versions
+    } catch (error) {
+      logger.debug(`registry metadata recheck failed: ${name}, error=${this.formatError(error).error}`)
+    }
+  }
+
   getPackage(name: string) {
     const notFoundAt = this.notFoundCache[name]
     if (notFoundAt && Date.now() - notFoundAt < NOT_FOUND_CACHE_TTL) {
@@ -202,6 +240,10 @@ export class RegistryMetadata {
     if (!this.pkgTasks[name]) {
       const task = this.fetchPackage(name, this.serial)
       this.pkgTasks[name] = task
+      this.fetching.set(name, task)
+      task.finally(() => {
+        if (this.fetching.get(name) === task) this.fetching.delete(name)
+      }).catch(() => {})
       task.then((versions) => {
         if (this.pkgTasks[name] !== task) return
         if (!versions) delete this.pkgTasks[name]
@@ -248,10 +290,7 @@ export class RegistryMetadata {
     try {
       const registry = await this.getRegistry(name, serial)
       if (this.isStale(serial) || !registry) return
-      this.fullCache[name] = this.tempCache[name] = getVersions(Object.values(registry.versions).filter((remote) => {
-        if (name === 'koishi') return satisfies(remote.version, '4')
-        return !Scanner.isPlugin(name) || Scanner.isCompatible('4', remote)
-      }))
+      this.fullCache[name] = this.tempCache[name] = filterVersions(name, registry)
       this.flushData()
       return this.fullCache[name]
     } catch (error) {

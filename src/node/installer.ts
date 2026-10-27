@@ -204,6 +204,28 @@ class Installer extends Service {
     return this.metadata.getPackage(name)
   }
 
+  // Fetches the versions of a few dependencies again without resetting the whole cache, so the
+  // dependencies page can pick up a release the market has already seen. Returns undefined when
+  // a full refresh started meanwhile and the result was dropped.
+  async refreshPackages(names: string[]) {
+    const serial = this.metadata.serial
+    let changed = 0
+    await pMap(names, async (name) => {
+      const versions = await this.metadata.recheckPackage(name)
+      if (this.isStale(serial) || !versions || !this.depCache[name]) return
+      const latest = Object.keys(versions)[0]
+      if (latest && latest !== this.depCache[name].latest) {
+        this.depCache[name].latest = latest
+        changed++
+      }
+    }, { concurrency: this.config.concurrency ?? 4 })
+    if (this.isStale(serial)) return
+    // Versions and registry status reach the console as patches already; only the
+    // dependency list needs a push when a latest version moved.
+    if (changed) await this.ctx.get('console')?.refresh('dependencies')
+    return changed
+  }
+
   private formatRegistryError(error: any) {
     return this.metadata.formatError(error)
   }
@@ -302,6 +324,8 @@ class Installer extends Service {
     if (!this.isStale(serial)) {
       this.depMetadataFresh = true
       this.ctx.get('console')?.refresh('dependencies')
+      const market = this.ctx.get('console')?.services.market as { syncDependencies?: (resetChecks?: boolean) => void } | undefined
+      market?.syncDependencies?.(true)
     }
     return result
   }
@@ -339,6 +363,11 @@ class Installer extends Service {
     await this.refreshDependencyMetadata(true)
     await this.refreshData()
     logger.info(`dependency ${reason} probe completed: deps=${Object.keys(this.manifest.dependencies ?? {}).length}, elapsed=${Date.now() - start}ms`)
+  }
+
+  // The dependency snapshot as it is, without building it or starting a metadata refresh.
+  getCachedDeps() {
+    return this.depCache
   }
 
   getDeps(options: Installer.GetDepsOptions = {}) {
