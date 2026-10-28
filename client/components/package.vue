@@ -41,7 +41,7 @@
         <span class="dep-arrow">→</span>
         <strong :class="{ 'is-remove': pendingRemove }">{{ targetText }}</strong>
       </template>
-      <span v-if="showVersionControl && !data" class="dep-muted">{{ compactStatusText }}</span>
+      <span v-if="showVersionControl && !hasVersions" class="dep-muted">{{ compactStatusText }}</span>
     </div>
 
     <p v-if="showDetailText" :class="['dep-detail', { 'is-danger': statusClass === 'error' }]">{{ detailText }}</p>
@@ -54,123 +54,41 @@
       <el-button v-if="showConfigure" size="small" type="primary" :loading="configuring" @click="configure">
         {{ t('dependencyCard.actions.addConfig') }}
       </el-button>
-      <el-button v-if="showBindLocal" size="small" type="primary" :loading="bindingLocal" @click="showLocalBindingDialog = true">
+      <el-button v-if="showBindLocal" size="small" type="primary" :loading="bindingLocalPackages.has(name)" @click="Object.assign(dependencyDialog, { type: 'local-binding', name })">
         {{ t('dependencyCard.actions.bindLocal') }}
       </el-button>
       <el-button v-if="showRestoreUpdate" size="small" @click="restoreUpdate">{{ t('dependencyCard.actions.restorePrompt') }}</el-button>
       <el-button v-if="showManageBundle" size="small" @click="openBundlePanel">{{ t('dependencyCard.actions.manage') }}</el-button>
     </div>
 
-    <el-dropdown v-if="menuItems.length" class="dep-menu" trigger="click" placement="bottom-end" @command="onCommand">
-      <el-button size="small" class="dep-more" :title="t('dependencyCard.actions.more')" :aria-label="t('dependencyCard.actions.more')">
+    <!-- The menu itself is shared by all cards, see dependency-menu.vue. -->
+    <div v-if="menuItems.length" ref="menuAnchor" class="dep-menu">
+      <el-button
+        size="small"
+        class="dep-more"
+        :title="t('dependencyCard.actions.more')"
+        :aria-label="t('dependencyCard.actions.more')"
+        aria-haspopup="menu"
+        :aria-expanded="String(menuOpen)"
+        @click="toggleMenu"
+      >
         <k-icon name="activity:ellipsis"></k-icon>
       </el-button>
-      <template #dropdown>
-        <el-dropdown-menu>
-          <el-dropdown-item
-            v-for="item in menuItems"
-            :key="item.command"
-            :command="item.command"
-            :divided="item.danger"
-            :class="['dep-menu-item', { 'dep-menu-danger': item.danger }]"
-          >
-            <k-icon :name="item.icon"></k-icon>
-            <span>{{ item.label }}</span>
-          </el-dropdown-item>
-        </el-dropdown-menu>
-      </template>
-    </el-dropdown>
+    </div>
   </article>
-
-  <el-dialog
-    v-model="showIgnoreDialog"
-    class="market-dialog"
-    width="520px"
-    append-to-body
-    destroy-on-close
-    :title="t('dependencyCard.ignore.title')"
-  >
-    <div class="dep-dialog-body">
-      <p>{{ t('dependencyCard.ignore.intro', { name: displayName, version: latestVersion }) }}</p>
-      <el-radio-group v-model="ignoreMode" class="dep-ignore-mode">
-        <el-radio value="version">{{ t('dependencyCard.ignore.thisVersion') }}</el-radio>
-        <el-radio value="package">{{ t('dependencyCard.ignore.permanent') }}</el-radio>
-      </el-radio-group>
-      <template v-if="ignoreMode === 'version'">
-        <div class="dep-ignore-field">
-          <span>{{ t('dependencyCard.ignore.duration') }}</span>
-          <el-select v-model="ignoreDurationPreset">
-            <el-option value="forever" :label="t('dependencyCard.ignore.forever')"></el-option>
-            <el-option value="1d" :label="t('dependencyCard.ignore.day', { count: 1 })"></el-option>
-            <el-option value="7d" :label="t('dependencyCard.ignore.day', { count: 7 })"></el-option>
-            <el-option value="30d" :label="t('dependencyCard.ignore.day', { count: 30 })"></el-option>
-            <el-option value="custom" :label="t('dependencyCard.ignore.custom')"></el-option>
-          </el-select>
-        </div>
-        <div v-if="ignoreDurationPreset === 'custom'" class="dep-ignore-field">
-          <span>{{ t('dependencyCard.ignore.customDays') }}</span>
-          <el-input-number v-model="ignoreCustomDays" :min="1" :max="3650" :step="1" controls-position="right"></el-input-number>
-        </div>
-        <div class="dep-ignore-field">
-          <span>{{ t('dependencyCard.ignore.versionCount') }}</span>
-          <el-input-number v-model="ignoreCount" :min="1" :max="20" :step="1" controls-position="right"></el-input-number>
-        </div>
-      </template>
-      <p class="dep-dialog-note">
-        {{ ignoreMode === 'package' ? t('dependencyCard.ignore.permanentNote') : t('dependencyCard.ignore.durationNote') }}
-      </p>
-    </div>
-    <template #footer>
-      <el-button @click="showIgnoreDialog = false">{{ t('dependencyCard.ignore.cancel') }}</el-button>
-      <el-button type="primary" :loading="ignoreSaving" @click="confirmIgnoreUpdate">{{ t('dependencyCard.ignore.confirm') }}</el-button>
-    </template>
-  </el-dialog>
-
-  <el-dialog
-    v-model="showLocalBindingDialog"
-    class="market-dialog"
-    width="520px"
-    append-to-body
-    destroy-on-close
-    :title="t('dependencyCard.localBinding.title')"
-  >
-    <div class="dep-dialog-body">
-      <p>{{ t('dependencyCard.localBinding.description', { name: displayName }) }}</p>
-      <k-comment type="warning"><p>{{ t('dependencyCard.localBinding.note') }}</p></k-comment>
-    </div>
-    <template #footer>
-      <el-button @click="showLocalBindingDialog = false">{{ t('dependencyCard.localBinding.cancel') }}</el-button>
-      <el-button type="primary" :loading="bindingLocal" @click="confirmLocalBinding">{{ t('dependencyCard.localBinding.confirm') }}</el-button>
-    </template>
-  </el-dialog>
-
-  <bundle-uninstall
-    v-model="showBundleUninstallDialog"
-    :package-name="name"
-    :record="bundleRecord"
-  ></bundle-uninstall>
-
-  <package-history
-    v-model="showPackageHistoryDialog"
-    :package-name="name"
-    :current-version="installedVersion"
-    @select-version="selectHistoryVersion"
-  ></package-history>
 </template>
 
 <script lang="ts" setup>
 
-import { computed, ref } from 'vue'
-import { message, send, store, useConfig, useContext } from '@koishijs/client'
+import { computed, onBeforeUnmount, ref } from 'vue'
+import { message, store, useConfig, useContext } from '@koishijs/client'
 import type { SearchObject } from '@koishijs/registry'
 import { getPluginShortname, isBundlePackageName, PLUGIN_PACKAGE_RE } from '../../src/shared/bundle'
 import { isLocalDependency } from '../../src/shared/dependency-source'
-import { createUpdateIgnoreRule, day, getBundleRecords, getFrontendMode, getIgnoredUpdateVersion, getLatestVersion, getMarketNextPolicy, getPendingOverrides, getWritableMarketNextPolicy, getUpdateIgnoreText, hasUpdate, isUpdateCheckDisabled, isUpdateIgnored, patchMarketNextConfig, patchMarketNextData } from '../utils'
-import { activeBundle, analyzeVersions, configuredPlugins, createLocalBundleRecord, ensureInstalledConfig, expandedDependency, formatEndpoint, formatShortname, getConfigWriter, getRegistryStatus, getRegistryStatusText, pendingBundleUninstalls } from './utils'
+import { getBundleRecords, getFrontendMode, getMarketNextPolicy, getOfferedVersion, getPendingOverrides, getUpdateIgnoreText, getWritableMarketNextPolicy, hasUpdate, isUpdateCheckDisabled, isUpdateIgnored, patchMarketNextData, persistUpdatePolicy } from '../utils'
+import { activeBundle, analyzeVersions, bindingLocalPackages, configuredPlugins, dependencyDialog, dependencyMenu, DependencyMenuItem, ensureInstalledConfig, expandedDependency, findBundleRecord, formatEndpoint, formatShortname, getConfigWriter, getInstalledVersion, getRegistryStatus, getRegistryStatusText, getVersions, pendingBundleUninstalls, setPendingVersion } from './utils'
 import { resolveCategory } from '../market/utils'
 import MarketIcon from '../market/icons'
-import BundleUninstall from './bundle-uninstall.vue'
-import PackageHistory from './package-history.vue'
 import VersionPicker from './version-picker.vue'
 import { useMarketNextI18n } from '../i18n'
 import { getMarketObject } from '../market/state'
@@ -193,16 +111,8 @@ const editing = computed({
   get: () => expandedDependency.value === props.name,
   set: (value: boolean) => expandedDependency.value = value ? props.name : '',
 })
-const showIgnoreDialog = ref(false)
-const showBundleUninstallDialog = ref(false)
-const showPackageHistoryDialog = ref(false)
-const showLocalBindingDialog = ref(false)
-const bindingLocal = ref(false)
-const ignoreMode = ref<'version' | 'package'>('version')
-const ignoreDurationPreset = ref<'forever' | '1d' | '7d' | '30d' | 'custom'>('forever')
-const ignoreCustomDays = ref(7)
-const ignoreCount = ref(1)
-const ignoreSaving = ref(false)
+const menuAnchor = ref<HTMLElement>()
+const menuOpen = computed(() => dependencyMenu.open && dependencyMenu.anchor === menuAnchor.value)
 
 const dep = computed(() => store.dependencies?.[props.name])
 const local = computed(() => store.packages?.[props.name])
@@ -210,7 +120,7 @@ const localDependency = computed(() => {
   return isLocalDependency(dep.value)
     || props.kind === 'local' && !dep.value && !!local.value
 })
-const bundleRecord = computed(() => getBundleRecords(config.value)[props.name] || createLocalBundleRecord(props.name))
+const bundleRecord = computed(() => findBundleRecord(props.name))
 
 const displayName = computed(() => formatShortname(props.name))
 
@@ -242,20 +152,20 @@ const icon = computed(() => {
   return props.name.includes('adapter-') ? 'solid:adapter' : 'solid:other'
 })
 
+// Checking peers for every version is costly, so only the picker reads `data`; everything else uses this.
+const hasVersions = computed(() => {
+  if (localDependency.value || dep.value?.invalid) return false
+  return !!getVersions(props.name)
+})
+
 const data = computed(() => {
-  if (localDependency.value || dep.value?.invalid) return
+  if (!hasVersions.value) return
   return analyzeVersions(props.name, (name) => getPendingOverrides()[name])
 })
 
 const status = computed(() => getRegistryStatus(props.name))
 
-const latestVersion = computed(() => {
-  const policy = getMarketNextPolicy(config.value)
-  return getLatestVersion(props.name, policy)
-    || getIgnoredUpdateVersion(props.name, policy)
-    || dep.value?.latest
-    || local.value?.package.version
-})
+const latestVersion = computed(() => getOfferedVersion(props.name, getMarketNextPolicy(config.value)))
 
 const overrideValue = computed(() => {
   const override = getPendingOverrides()
@@ -282,14 +192,7 @@ const selectedVersion = computed({
     return dep.value?.resolved ?? latestVersion.value ?? ''
   },
   set(value: string) {
-    if (value === removeValue) {
-      getPendingOverrides()[props.name] = ''
-    } else if (value === dep.value?.resolved || !value && !dep.value) {
-      delete getPendingOverrides()[props.name]
-    } else {
-      getPendingOverrides()[props.name] = value
-    }
-    void patchMarketNextData({ override: { ...getPendingOverrides() } })
+    setPendingVersion(props.name, value === removeValue ? '' : !value && !dep.value ? undefined : value)
   },
 })
 
@@ -329,7 +232,7 @@ const currentText = computed(() => {
   return dep.value.resolved ?? t('dependencyCard.current.installError')
 })
 
-const installedVersion = computed(() => dep.value?.resolved ?? local.value?.package.version ?? '')
+const installedVersion = computed(() => getInstalledVersion(props.name))
 
 const showTarget = computed(() => {
   if (pending.value || updatable.value) return true
@@ -373,7 +276,7 @@ const detailText = computed(() => {
   if (dep.value?.invalid) return t('dependencyCard.detail.unsupported')
   if (bundlePackage.value && (dep.value || local.value)) return t('dependencyCard.detail.bundle')
   if (unconfigured.value) return t('dependencyCard.detail.unconfigured')
-  if (status.value?.error || !data.value) return getRegistryStatusText(props.name)
+  if (status.value?.error || !hasVersions.value) return getRegistryStatusText(props.name)
   if (updateCheckDisabled.value) return t('dependencyCard.detail.checkDisabled')
   if (ignoredUpdate.value) return getUpdateIgnoreText(props.name, getMarketNextPolicy(config.value)) || t('dependencyCard.detail.ignored')
   return ''
@@ -407,11 +310,11 @@ const showDetailText = computed(() => {
 
 const showVersionControl = computed(() => {
   if (localDependency.value) return false
-  if (!data.value && !status.value?.error) return false
+  if (!hasVersions.value && !status.value?.error) return false
   return editing.value || pending.value || statusClass.value === 'error' || statusClass.value === 'manual'
 })
 
-const showPicker = computed(() => showVersionControl.value && !!data.value)
+const showPicker = computed(() => showVersionControl.value && hasVersions.value)
 
 const showManageBundle = computed(() => bundlePackage.value && !!(dep.value || local.value) && !pending.value)
 
@@ -426,8 +329,8 @@ const showConfigure = computed(() => !pending.value && unconfigured.value)
 const showBindLocal = computed(() => !pending.value && dep.value?.source === 'unbound' && dep.value?.bound === false)
 
 const menuItems = computed(() => {
-  const items: { command: string, label: string, icon: string, danger?: boolean }[] = []
-  if (!bundlePackage.value && !pending.value && !localDependency.value && data.value && !['error', 'manual'].includes(statusClass.value)) {
+  const items: DependencyMenuItem[] = []
+  if (!bundlePackage.value && !pending.value && !localDependency.value && hasVersions.value && !['error', 'manual'].includes(statusClass.value)) {
     items.push({ command: 'version', icon: 'market-next:switch', label: editing.value ? t('dependencyCard.actions.hideVersions') : t('dependencyCard.actions.pickVersion') })
   }
   if (dep.value?.resolved && !localDependency.value && !dep.value.invalid) {
@@ -450,13 +353,25 @@ const showActions = computed(() => {
     || showRestoreUpdate.value || showManageBundle.value
 })
 
+function toggleMenu() {
+  if (menuOpen.value) {
+    dependencyMenu.open = false
+    return
+  }
+  Object.assign(dependencyMenu, { open: true, anchor: menuAnchor.value, items: () => menuItems.value, select: onCommand })
+}
+
+onBeforeUnmount(() => {
+  if (menuOpen.value) dependencyMenu.open = false
+})
+
 function onCommand(command: string) {
   if (command === 'version') editing.value = !editing.value
-  if (command === 'history') showPackageHistoryDialog.value = true
-  if (command === 'ignore') openIgnoreDialog()
+  if (command === 'history') Object.assign(dependencyDialog, { type: 'history', name: props.name })
+  if (command === 'ignore') Object.assign(dependencyDialog, { type: 'ignore', name: props.name })
   if (command !== 'remove') return
   if (bundleRecord.value) {
-    showBundleUninstallDialog.value = true
+    Object.assign(dependencyDialog, { type: 'bundle-uninstall', name: props.name })
     return
   }
   selectedVersion.value = removeValue
@@ -483,78 +398,6 @@ function clearOverride() {
   delete pendingBundleUninstalls.value[props.name]
 }
 
-function selectHistoryVersion(version: string) {
-  if (!version || version === installedVersion.value) return
-  selectedVersion.value = version
-}
-
-async function confirmLocalBinding() {
-  if (bindingLocal.value) return
-  bindingLocal.value = true
-  try {
-    const result = await send('market/prepare-local-binding', props.name)
-    if (!result?.request) throw new Error('invalid local binding result')
-    getPendingOverrides()[props.name] = result.request
-    const saved = await patchMarketNextData({ override: { ...getPendingOverrides() } })
-    if (!saved) {
-      delete getPendingOverrides()[props.name]
-      throw new Error('failed to save local binding override')
-    }
-    showLocalBindingDialog.value = false
-    message.success(t('dependencyCard.localBinding.prepared'))
-  } catch (error) {
-    console.error(error)
-    message.error(t('dependencyCard.localBinding.failed'))
-  } finally {
-    bindingLocal.value = false
-  }
-}
-
-function openIgnoreDialog() {
-  const policy = getMarketNextPolicy(config.value)
-  const duration = Math.max(0, policy.updateIgnoreDays ?? 0) * day
-  ignoreDurationPreset.value = duration === 0 ? 'forever'
-    : duration === day ? '1d'
-    : duration === 7 * day ? '7d'
-    : duration === 30 * day ? '30d'
-    : 'custom'
-  ignoreCustomDays.value = Math.max(1, Math.ceil(duration / day))
-  ignoreCount.value = Math.max(1, Math.min(20, Math.floor(policy.updateIgnoreVersions || 1)))
-  ignoreMode.value = 'version'
-  showIgnoreDialog.value = true
-}
-
-async function confirmIgnoreUpdate() {
-  if (ignoreSaving.value) return
-  const policy = getWritableMarketNextPolicy(config.value)
-  policy.updateIgnored ||= {}
-  if (ignoreMode.value === 'package') {
-    const names = (policy.updateIgnoredPackages ?? '').split(/[\s,，;；]+/g).filter(Boolean)
-    if (!names.some(item => item.toLowerCase() === props.name.toLowerCase())) names.push(props.name)
-    policy.updateIgnoredPackages = names.join('\n')
-    delete policy.updateIgnored[props.name]
-  } else {
-    const preset = ignoreDurationPreset.value
-    const rule = createUpdateIgnoreRule(props.name, getMarketNextPolicy(config.value), {
-      duration: preset === 'custom' ? Math.max(1, Math.min(3650, Math.floor(ignoreCustomDays.value))) * day
-        : preset === 'forever' ? 0
-        : Number.parseInt(preset) * day,
-      count: ignoreCount.value,
-    })
-    if (!rule) return
-    policy.updateIgnored[props.name] = rule
-  }
-  ignoreSaving.value = true
-  const saved = await persistUpdatePolicy()
-  ignoreSaving.value = false
-  if (!saved) {
-    message.error(t('common.messages.saveFailed'))
-    return
-  }
-  showIgnoreDialog.value = false
-  message.success(ignoreMode.value === 'package' ? t('dependencyCard.ignore.addedToDisabled') : t('dependencyCard.ignore.saved'))
-}
-
 async function restoreUpdate() {
   const policy = getWritableMarketNextPolicy(config.value)
   delete policy.updateIgnored?.[props.name]
@@ -563,20 +406,6 @@ async function restoreUpdate() {
     .filter(item => item && item.toLowerCase() !== props.name.toLowerCase())
     .join('\n')
   if (!await persistUpdatePolicy()) message.error(t('common.messages.saveFailed'))
-}
-
-async function persistUpdatePolicy() {
-  const policy = getMarketNextPolicy(config.value)
-  const configSaved = await patchMarketNextConfig({
-    updateIgnoredPackages: policy.updateIgnoredPackages,
-    updateIgnoreDays: policy.updateIgnoreDays,
-    updateIgnoreVersions: policy.updateIgnoreVersions,
-    updateIgnorePrerelease: policy.updateIgnorePrerelease,
-  })
-  const dataSaved = await patchMarketNextData({
-    updateIgnored: policy.updateIgnored,
-  })
-  return configSaved && dataSaved
 }
 
 async function configure() {
@@ -589,81 +418,6 @@ async function configure() {
 }
 
 </script>
-
-<style lang="scss">
-
-.dep-menu-item.el-dropdown-menu__item {
-  gap: 0.625rem;
-  min-width: 9rem;
-
-  .k-icon {
-    width: 1rem;
-    height: 1rem;
-    color: var(--fg3);
-  }
-}
-
-.dep-menu-danger.el-dropdown-menu__item:not(.is-disabled) {
-  color: var(--danger);
-
-  .k-icon {
-    color: inherit;
-  }
-
-  &:hover, &:focus {
-    color: var(--danger);
-    background: color-mix(in srgb, var(--danger) 10%, transparent);
-  }
-}
-
-.dep-dialog-body {
-  display: grid;
-  gap: 0.875rem;
-
-  p {
-    margin: 0;
-    line-height: 1.6;
-  }
-
-  .dep-ignore-mode {
-    display: grid;
-    gap: 0.25rem;
-
-    .el-radio {
-      margin-right: 0;
-    }
-  }
-
-  .dep-ignore-field {
-    display: grid;
-    grid-template-columns: 8rem minmax(0, 12rem);
-    align-items: center;
-    gap: 0.75rem;
-
-    > span {
-      color: var(--fg2);
-    }
-
-    .el-input-number,
-    .el-select {
-      width: 100%;
-    }
-  }
-
-  .dep-dialog-note {
-    color: var(--fg3);
-    font-size: 0.875rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .dep-dialog-body .dep-ignore-field {
-    grid-template-columns: 1fr;
-    gap: 0.375rem;
-  }
-}
-
-</style>
 
 <style lang="scss" scoped>
 

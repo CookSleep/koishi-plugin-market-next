@@ -140,6 +140,7 @@ function setAllActions(action: MemberAction) {
 }
 const ctx = useContext()
 const loadingRecord = ref(false)
+let loadSerial = 0
 const uninstalling = ref(false)
 const remoteRecord = ref<BundleRecordView>()
 const memberActions = reactive<Record<string, MemberAction>>({})
@@ -187,30 +188,38 @@ const keepCount = computed(() => Math.max(0, memberRows.value.length - new Set([
   ...configCleanupMembers.value.map(row => row.package),
 ]).size))
 
-watch(visible, async (value) => {
-  if (!value) return
+watch(visible, async (value, previous) => {
+  if (!value) {
+    if (!previous) return
+    // Drops a load still running for the dialog that just closed.
+    loadSerial++
+    loadingRecord.value = false
+    return
+  }
   remoteRecord.value = undefined
-  await loadRecord()
-  resetActions()
+  if (await loadRecord()) resetActions()
 }, { immediate: true })
 
 watch(memberRows, () => {
   if (visible.value) resetActions(false)
 })
 
+// Returns false when a newer load has started, e.g. the dialog was reopened for another bundle.
 async function loadRecord() {
+  const serial = ++loadSerial
   const name = packageName.value
-  if (!name || props.record?.members?.length) return
+  if (!name || props.record?.members?.length) return true
   loadingRecord.value = true
   try {
     const record = await fetchBundleRecord(name)
-    if (record) remoteRecord.value = record
+    if (record && serial === loadSerial) remoteRecord.value = record
   } catch (error) {
     console.warn(error)
-    message.warning(t('bundle.messages.recordFailed'))
+    if (serial === loadSerial) message.warning(t('bundle.messages.recordFailed'))
   } finally {
-    loadingRecord.value = false
+    if (serial === loadSerial) loadingRecord.value = false
   }
+  return serial === loadSerial
 }
 
 function resetActions(force = true) {

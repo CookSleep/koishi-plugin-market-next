@@ -113,6 +113,9 @@ async function loadHistory() {
   loading.value = true
   error.value = ''
   selectedId.value = ''
+  // The dialog is shared by every dependency, so drop what the previous package left behind.
+  entries.value = []
+  currentVersion.value = ''
   try {
     const result = await (send('market/package-history', props.packageName, 24) ?? Promise.resolve(undefined)) as InstallPackageHistory | undefined
     if (serial !== loadSerial) return
@@ -121,8 +124,6 @@ async function loadHistory() {
   } catch (cause) {
     if (serial !== loadSerial) return
     console.error(cause)
-    entries.value = []
-    currentVersion.value = ''
     error.value = t('operations.timeline.loadFailed')
   } finally {
     if (serial === loadSerial) loading.value = false

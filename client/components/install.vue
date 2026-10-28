@@ -129,8 +129,8 @@
 
 import { computed, ref, watch, reactive } from 'vue'
 import { Dict, global, message, send, store, useContext, useConfig } from '@koishijs/client'
-import { analyzeVersions, createLocalBundleRecord, ensureInstalledConfig, getConfigWriter, getRegistryStatus, getRegistryStatusText, install, PeerInfo, ResultType } from './utils'
-import { active, getBulkMode, getBundleRecords, getFrontendMode, getPendingOverrides, getRemoveConfig, getWritableBundleRecords, patchMarketNextConfig, patchMarketNextData } from '../utils'
+import { analyzeVersions, ensureInstalledConfig, findBundleRecord, getConfigWriter, getRegistryStatus, getRegistryStatusText, install, PeerInfo, ResultType } from './utils'
+import { active, getBulkMode, getFrontendMode, getPendingOverrides, getRemoveConfig, getWritableBundleRecords, patchMarketNextConfig, patchMarketNextData } from '../utils'
 import { parse } from 'semver'
 import { isBundlePackageName } from '../../src/shared/bundle'
 import { isLocalDependency } from '../../src/shared/dependency-source'
@@ -270,7 +270,7 @@ const local = computed(() => store.packages?.[active.value])
 const bundleUninstallRecord = computed(() => {
   const target = bundleUninstallTarget.value
   if (!target || !isBundlePackageName(target)) return
-  return getBundleRecords(config.value)[target] || createLocalBundleRecord(target)
+  return findBundleRecord(target)
 })
 
 const showRemoveButton = computed(() => {
@@ -290,7 +290,7 @@ function isLocalPackageSelection(name: string) {
 
 function requestRemove() {
   const target = active.value
-  const record = target && (getBundleRecords(config.value)[target] || createLocalBundleRecord(target))
+  const record = target && findBundleRecord(target)
   if (target && record) {
     bundleUninstallTarget.value = target
     active.value = ''

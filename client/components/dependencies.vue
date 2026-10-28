@@ -94,6 +94,8 @@
   </k-layout>
 
   <manual-install/>
+  <dependency-dialogs/>
+  <dependency-menu/>
 </template>
 
 <script lang="ts" setup>
@@ -101,9 +103,11 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch, WatchStopHandle } from 'vue'
 import { message, router, store, useConfig, useContext } from '@koishijs/client'
 import { useMarketNextI18n } from '../i18n'
-import { getBundleRecords, getCollapsedGroups, getFrontendMode, getDepsLayout, getLatestVersion, getMarketNextConfig, getMarketNextPolicy, getPendingOverrides, getWritableMarketNextPolicy, hasUpdate, isUpdateCheckDisabled, isUpdateIgnored, patchMarketNextConfig, patchMarketNextData } from '../utils'
-import { addManual, configuredPlugins, createLocalBundleRecord, getConfigWriter, getRegistryStatus, pendingBundleUninstalls, showConfirm } from './utils'
+import { getCollapsedGroups, getFrontendMode, getDepsLayout, getLatestVersion, getMarketNextConfig, getMarketNextPolicy, getPendingOverrides, getWritableMarketNextPolicy, hasUpdate, isUpdateCheckDisabled, isUpdateIgnored, patchMarketNextConfig, patchMarketNextData } from '../utils'
+import { addManual, configuredPlugins, findBundleRecord, getConfigWriter, getRegistryStatus, pendingBundleUninstalls, showConfirm } from './utils'
 import ManualInstall from './manual.vue'
+import DependencyDialogs from './dependency-dialogs.vue'
+import DependencyMenu from './dependency-menu.vue'
 import PackageView from './package.vue'
 import EmptyState from './empty-state.vue'
 import MarketIcon from '../market/icons'
@@ -141,7 +145,7 @@ const depsLayout = computed(() => getDepsLayout(config.value))
 const modeClass = computed(() => `market-mode-${getFrontendMode(config.value)}`)
 
 function isManageableBundle(name: string) {
-  return !!(getBundleRecords(config.value)[name] || createLocalBundleRecord(name))
+  return !!findBundleRecord(name)
 }
 
 const names = computed(() => {

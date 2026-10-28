@@ -352,6 +352,20 @@ export function patchMarketNextConfig(patch: Partial<MarketNextConfigPatch>) {
   })
 }
 
+export async function persistUpdatePolicy() {
+  const policy = getMarketNextPolicy()
+  const configSaved = await patchMarketNextConfig({
+    updateIgnoredPackages: policy.updateIgnoredPackages,
+    updateIgnoreDays: policy.updateIgnoreDays,
+    updateIgnoreVersions: policy.updateIgnoreVersions,
+    updateIgnorePrerelease: policy.updateIgnorePrerelease,
+  })
+  const dataSaved = await patchMarketNextData({
+    updateIgnored: policy.updateIgnored,
+  })
+  return configSaved && dataSaved
+}
+
 export function patchMarketNextData(patch: Partial<MarketNextDataStore>) {
   const data = getMarketDataStore()
   const settle = applyOptimisticPatch(data, patch, dataPatchRevisions)
@@ -388,6 +402,14 @@ export function createUpdateIgnoreRule(name: string, policy?: UpdatePolicy, opti
 export function getLatestVersion(name: string, policy?: UpdatePolicy) {
   const candidates = getUpdateCandidates(name, policy)
   return candidates.find(version => !isUpdateVersionIgnored(name, version, candidates, policy))
+}
+
+// The version a dependency card offers, also when the update is ignored or not checked.
+export function getOfferedVersion(name: string, policy?: UpdatePolicy) {
+  return getLatestVersion(name, policy)
+    || getIgnoredUpdateVersion(name, policy)
+    || store.dependencies?.[name]?.latest
+    || store.packages?.[name]?.package.version
 }
 
 export function getIgnoredUpdateVersion(name: string, policy?: UpdatePolicy) {

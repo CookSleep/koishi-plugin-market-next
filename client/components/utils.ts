@@ -2,8 +2,8 @@ import { Awaitable, Context, Dict, loading, message, receive, send, socket, stor
 import type { Registry, SearchObject } from '@koishijs/registry'
 import type { RegistryStatus } from 'koishi-plugin-market-next'
 import { compare, satisfies } from 'semver'
-import { computed, reactive, Ref, ref, watch } from 'vue'
-import { active } from '../utils'
+import { computed, reactive, Ref, ref, shallowReactive, watch } from 'vue'
+import { active, getBundleRecords, getPendingOverrides, patchMarketNextData } from '../utils'
 import { translate } from '../i18n'
 import { getMarketObject } from '../market/state'
 import {
@@ -50,8 +50,13 @@ export interface PeerInfo {
   result: ResultType
 }
 
+// Shared with cards that only need to know whether versions exist, so both read the same source.
+export function getVersions(name: string) {
+  return store.registry?.[name] || manualDeps[name]?.versions
+}
+
 export function analyzeVersions(name: string, getVersion: (name: string) => string): Dict<AnalyzeResult> {
-  const versions = store.registry?.[name] || manualDeps[name]?.versions
+  const versions = getVersions(name)
   if (!versions) return
   return valueMap(versions, (item) => {
     const peers = valueMap({ ...item.peerDependencies }, (request, name) => {
@@ -134,6 +139,47 @@ export const showInstallHistory = ref(false)
 export const showEnvironmentVersions = ref(false)
 export const expandedDependency = ref('')
 
+export type DependencyDialogType = 'ignore' | 'local-binding' | 'bundle-uninstall' | 'history'
+
+// The dependency page keeps one set of dialogs for all cards. The target stays set after
+// closing so the dialog keeps its content while it fades out.
+export const dependencyDialog = reactive({
+  type: undefined as DependencyDialogType | undefined,
+  name: '',
+})
+
+export interface DependencyMenuItem {
+  command: string
+  label: string
+  icon: string
+  danger?: boolean
+}
+
+// Like the dialogs, one "more" menu serves every card and is placed next to the clicked button.
+// The anchor is the element wrapping that button, because Element Plus rewrites the aria
+// attributes of the element it is anchored to. The rest stays set while the menu fades out
+// and is cleared once it is hidden.
+export const dependencyMenu = shallowReactive({
+  open: false,
+  anchor: undefined as HTMLElement | undefined,
+  items: (() => []) as () => DependencyMenuItem[],
+  select: (() => {}) as (command: string) => void,
+})
+
+// Packages whose local binding is being prepared, so the card shows it even after the dialog closes.
+export const bindingLocalPackages = reactive(new Set<string>())
+
+// An empty version removes the package and undefined drops the pending change.
+export function setPendingVersion(name: string, version: string | undefined) {
+  const override = getPendingOverrides()
+  if (version === undefined || version === store.dependencies?.[name]?.resolved) {
+    delete override[name]
+  } else {
+    override[name] = version
+  }
+  void patchMarketNextData({ override: { ...override } })
+}
+
 // Runs one load at a time. A call during a load waits for it instead of starting another, and
 // a refresh that keeps the current selection runs once that load is done.
 export function createSerialLoader(run: (preserveSelection: boolean) => Promise<void>) {
@@ -201,6 +247,14 @@ export function createBundleRecordFromManifest(packageName: string, version = ''
   }
 }
 
+export function getInstalledVersion(name: string) {
+  return store.dependencies?.[name]?.resolved ?? store.packages?.[name]?.package.version ?? ''
+}
+
+export function findBundleRecord(packageName: string) {
+  return getBundleRecords()[packageName] || createLocalBundleRecord(packageName)
+}
+
 export function createLocalBundleRecord(packageName: string): BundleRecordView | undefined {
   if (!isBundlePackageName(packageName)) return
   const local = store.packages?.[packageName]
@@ -208,7 +262,7 @@ export function createLocalBundleRecord(packageName: string): BundleRecordView |
   if (!local && !dep) return
   const bundle = parseBundleManifest((local?.package as any)?.koishi?.bundle)
   if (!bundle?.members.length) return
-  return createBundleRecordFromManifest(packageName, dep?.resolved ?? local?.package.version ?? '', bundle)
+  return createBundleRecordFromManifest(packageName, getInstalledVersion(packageName), bundle)
 }
 
 export function resolveBundlePackageFromGroup(groupPath?: string, records: Dict<PluginBundleRecord> = {}) {
@@ -268,7 +322,7 @@ export async function fetchBundleRecord(packageName: string): Promise<BundleReco
     return undefined
   }) as Registry | undefined
   if (!registry?.versions) return createLocalBundleRecord(packageName)
-  const targetVersion = store.dependencies?.[packageName]?.resolved ?? store.packages?.[packageName]?.package.version
+  const targetVersion = getInstalledVersion(packageName)
   const entry = targetVersion && registry.versions?.[targetVersion]
     ? [targetVersion, registry.versions[targetVersion]] as const
     : Object.entries(registry.versions ?? {})[0]
