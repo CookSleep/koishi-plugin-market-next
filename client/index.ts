@@ -8,6 +8,7 @@ import './icons'
 import './styles/scrollbars.scss'
 import './styles/dialog.scss'
 import './styles/buttons.scss'
+import './styles/bundle.scss'
 
 import 'virtual:uno.css'
 

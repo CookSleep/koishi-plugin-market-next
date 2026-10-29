@@ -3,84 +3,76 @@
     v-model="visible"
     append-to-body
     class="bundle-uninstall-dialog"
-    :title="title || t('bundle.actions.uninstall')"
     width="720px"
     destroy-on-close
   >
-    <template v-if="packageName">
-      <div class="bundle-uninstall-body">
-        <p>
-          <strong>{{ recordView?.label || packageName }}</strong>
-          {{ t('bundle.messages.isBundle') }}
-        </p>
-
-        <p class="bundle-package-name">{{ packageName }}</p>
-
-        <k-comment v-if="recordView?.fallback" type="warning">
-          <p>{{ t('bundle.messages.fallbackRecord') }}</p>
-        </k-comment>
-
-        <div v-if="loadingRecord" class="bundle-loading">{{ t('bundle.loading') }}</div>
-
-        <template v-else-if="memberRows.length">
-          <!-- Bulk Operations Bar -->
-          <div class="bundle-bulk-row">
-            <span class="bulk-label">{{ t('bundle.bulk.label') }}</span>
-            <button class="bundle-section-action" @click="setAllActions('dependency')">{{ t('bundle.bulk.removeDependency') }}</button>
-            <span class="bundle-section-spacer">|</span>
-            <button class="bundle-section-action" @click="setAllActions('config')">{{ t('bundle.bulk.cleanConfig') }}</button>
-            <span class="bundle-section-spacer">|</span>
-            <button class="bundle-section-action" @click="setAllActions('keep')">{{ t('bundle.bulk.keepAll') }}</button>
-          </div>
-
-          <el-scrollbar max-height="46vh" view-class="bundle-member-list">
-            <section v-for="row in memberRows" :key="row.package" class="bundle-member-option">
-              <div class="member-main">
-                <span class="member-title">{{ row.package }}</span>
-                <span class="member-meta">
-                  {{ row.required ? t('bundle.members.required') : t('bundle.members.optional') }} · {{ row.version || t('bundle.members.notDeclared') }}
-                </span>
-              </div>
-              <div class="member-state">
-                <span>{{ row.installed ? t('bundle.members.dependencyInstalled') : t('bundle.members.dependencyNotInstalled') }}</span>
-                <span v-if="row.hasGroupConfig">{{ t('bundle.members.groupConfig') }}</span>
-                <span v-if="row.hasExternalConfig" class="warning">{{ t('bundle.members.externalConfig') }}</span>
-                <span v-if="row.workspace">{{ t('bundle.members.workspace') }}</span>
-              </div>
-              <el-radio-group v-model="memberActions[row.package]" size="small">
-                <el-radio-button value="config" :disabled="!row.hasGroupConfig">{{ t('bundle.members.cleanGroupConfig') }}</el-radio-button>
-                <el-radio-button value="dependency" :disabled="!row.canRemoveDependency">
-                  {{ t('bundle.members.removeDependency') }}
-                </el-radio-button>
-                <el-radio-button value="keep">{{ t('bundle.members.keep') }}</el-radio-button>
-              </el-radio-group>
-              <p v-if="row.hasExternalConfig" class="member-note">
-                {{ t('bundle.conflict.externalNote') }}
-              </p>
-            </section>
-          </el-scrollbar>
-        </template>
-
-        <k-comment v-else>
-          <p>{{ t('bundle.messages.noMembers') }}</p>
-        </k-comment>
-
-        <div class="bundle-summary">
-          <span>{{ t('bundle.summary.remove', { count: dependencyRemovalCount }) }}</span>
-          <span>{{ t('bundle.summary.clean', { count: configCleanupCount }) }}</span>
-          <span>{{ t('bundle.summary.keep', { count: keepCount }) }}</span>
-        </div>
-
-        <p class="bundle-uninstall-note">
-          {{ t('bundle.messages.outsideConfig') }}
-        </p>
+    <template #header="{ titleId, titleClass }">
+      <span :id="titleId" :class="titleClass">{{ title || t('bundle.actions.uninstall') }}</span>
+      <div v-if="packageName" class="bundle-meta">
+        <template v-if="recordView?.label">{{ recordView.label }} · </template>{{ packageName }}
       </div>
     </template>
-    <template v-else>
-      <k-comment type="warning">
-        <p>{{ t('bundle.messages.noDependency') }}</p>
+
+    <template v-if="packageName">
+      <p class="dialog-intro">{{ t('bundle.messages.uninstallIntro') }}</p>
+
+      <k-comment v-if="recordView?.fallback" type="warning">
+        <p>{{ t('bundle.messages.fallbackRecord') }}</p>
       </k-comment>
+
+      <div v-if="loadingRecord" class="bundle-state">{{ t('bundle.loading') }}</div>
+
+      <section v-else-if="memberRows.length" class="dialog-section">
+        <div class="dialog-section-title">
+          <span>{{ t('bundle.members.title') }}</span>
+          <span class="dialog-count">{{ memberRows.length }}</span>
+        </div>
+        <div class="dialog-list">
+          <!-- Works like a select-all: picks the same action for every member, and shows one only while all members match it. -->
+          <div class="dialog-list-row bundle-member bundle-all">
+            <span class="bundle-all-label">{{ t('bundle.members.all') }}</span>
+            <el-radio-group :model-value="commonAction" size="small" class="member-action" @change="setAllActions">
+              <el-radio-button value="config" :disabled="!memberRows.some(row => row.hasGroupConfig)">{{ t('bundle.members.cleanGroupConfig') }}</el-radio-button>
+              <el-radio-button value="dependency" :disabled="!memberRows.some(row => row.canRemoveDependency)">{{ t('bundle.members.removeDependency') }}</el-radio-button>
+              <el-radio-button value="keep">{{ t('bundle.members.keep') }}</el-radio-button>
+            </el-radio-group>
+          </div>
+          <div v-for="row in memberRows" :key="row.package" class="dialog-list-row bundle-member">
+            <div class="member-main">
+              <div class="member-line">
+                <span class="member-name">{{ formatShortname(row.package) }}</span>
+                <span class="member-version">{{ row.version || t('bundle.members.notDeclared') }}</span>
+                <span class="dialog-tag">{{ row.required ? t('bundle.members.requiredTag') : t('bundle.members.optionalTag') }}</span>
+                <span v-if="row.hasGroupConfig" class="dialog-tag">{{ t('bundle.members.groupConfig') }}</span>
+                <span v-if="row.hasExternalConfig" class="dialog-tag warning">{{ t('bundle.members.externalConfig') }}</span>
+                <span v-if="row.workspace" class="dialog-tag">{{ t('bundle.members.workspace') }}</span>
+              </div>
+              <div class="member-sub">
+                {{ row.package }} · {{ row.installed ? t('bundle.members.dependencyInstalled') : t('bundle.members.dependencyNotInstalled') }}
+              </div>
+              <p v-if="row.hasExternalConfig" class="member-note warning">{{ t('bundle.conflict.externalNote') }}</p>
+            </div>
+            <el-radio-group v-model="memberActions[row.package]" size="small" class="member-action">
+              <el-radio-button value="config" :disabled="!row.hasGroupConfig">{{ t('bundle.members.cleanGroupConfig') }}</el-radio-button>
+              <el-radio-button value="dependency" :disabled="!row.canRemoveDependency">{{ t('bundle.members.removeDependency') }}</el-radio-button>
+              <el-radio-button value="keep">{{ t('bundle.members.keep') }}</el-radio-button>
+            </el-radio-group>
+          </div>
+        </div>
+      </section>
+
+      <k-comment v-else>
+        <p>{{ t('bundle.messages.noMembers') }}</p>
+      </k-comment>
+
+      <p class="bundle-summary">
+        {{ t('bundle.summary.text', { remove: dependencyRemovalCount, clean: configCleanupCount, keep: keepCount }) }}
+        {{ t('bundle.messages.outsideConfig') }}
+      </p>
     </template>
+    <k-comment v-else type="warning">
+      <p>{{ t('bundle.messages.noDependency') }}</p>
+    </k-comment>
 
     <template #footer>
       <el-button @click="visible = false">{{ t('bundle.actions.cancel') }}</el-button>
@@ -98,6 +90,7 @@ import { message, router, send, store, useConfig, useContext } from '@koishijs/c
 import { getBundleGroupIdent, type PluginBundleRecord } from '../../src/shared/bundle'
 import {
   fetchBundleRecord,
+  formatShortname,
   getBundleMemberConfigState,
   install,
   pendingBundleUninstalls,
@@ -128,17 +121,22 @@ const emit = defineEmits<{
 const config = useConfig()
 const { t } = useMarketNextI18n()
 
-function setAllActions(action: MemberAction) {
-  for (const row of memberRows.value) {
-    if (action === 'dependency') {
-      memberActions[row.package] = row.canRemoveDependency ? 'dependency' : (row.hasGroupConfig ? 'config' : 'keep')
-    } else if (action === 'config') {
-      memberActions[row.package] = row.hasGroupConfig ? 'config' : 'keep'
-    } else {
-      memberActions[row.package] = 'keep'
-    }
-  }
+// A member that can't take the requested action falls back to the next milder one.
+function getAllAction(row: typeof memberRows.value[number], action: MemberAction): MemberAction {
+  if (action === 'dependency' && row.canRemoveDependency) return 'dependency'
+  if (action !== 'keep' && row.hasGroupConfig) return 'config'
+  return 'keep'
 }
+
+function setAllActions(action: MemberAction) {
+  for (const row of memberRows.value) memberActions[row.package] = getAllAction(row, action)
+}
+
+const commonAction = computed(() => {
+  return (['keep', 'config', 'dependency'] as const).find(action => {
+    return memberRows.value.every(row => memberActions[row.package] === getAllAction(row, action))
+  })
+})
 const ctx = useContext()
 const loadingRecord = ref(false)
 let loadSerial = 0
@@ -310,158 +308,60 @@ async function uninstallBundle() {
 <style lang="scss">
 
 .bundle-uninstall-dialog {
+  // Keeps the title and package name clear of the close button.
+  .el-dialog__header {
+    padding-right: 36px;
+  }
 
-  .el-radio-group {
+  .bundle-member {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  .el-radio-button {
-    min-width: 0;
-  }
-
-  .el-radio-button__inner {
-    width: 100%;
-    padding-inline: 0.5rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .bundle-uninstall-body {
-    display: grid;
-    gap: 0.75rem;
-    min-width: 0;
-
-    p {
-      margin: 0;
-      color: var(--fg2);
-      line-height: 1.5;
-    }
-  }
-
-  .bundle-package-name {
-    padding: 0.45rem 0.6rem;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--k-color-primary) 7%, var(--k-card-bg));
-    color: var(--fg1);
-    font-family: var(--font-mono);
-    word-break: break-all;
-  }
-
-  .bundle-member-list {
-    display: grid;
-    gap: 0.55rem;
-    // Room for the overlaid scrollbar.
-    padding-right: 0.625rem;
-  }
-
-  .bundle-member-option {
-    display: grid;
-    gap: 0.45rem;
-    min-width: 0;
-    padding: 0.58rem 0.65rem;
-    border: 1px solid color-mix(in srgb, var(--k-color-border) 72%, transparent);
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--k-side-bg) 72%, var(--k-card-bg));
-  }
-
-  .member-main,
-  .member-state,
-  .bundle-summary {
-    display: flex;
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.35rem 0.6rem;
+    gap: 0.5rem 1rem;
   }
 
-  .member-main,
-  .member-state {
-    min-width: 0;
+  .bundle-all {
+    background: var(--k-side-bg);
   }
 
-  .member-title {
-    font-weight: 600;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: break-all;
-  }
-
-  .member-meta,
-  .member-state {
-    color: var(--fg3);
-    font-size: 0.78rem;
-  }
-
-  .member-state span {
-    border-radius: 999px;
-    padding: 0.08rem 0.42rem;
-    background: color-mix(in srgb, var(--fg3) 9%, transparent);
-  }
-
-  .member-state .warning {
-    color: var(--k-color-warning);
-    background: color-mix(in srgb, var(--k-color-warning) 10%, transparent);
-  }
-
-  .member-note {
-    font-size: 0.78rem;
-  }
-
-  .bundle-summary,
-  .bundle-uninstall-note {
-    border-radius: 8px;
-    padding: 0.55rem 0.65rem;
-    background: color-mix(in srgb, var(--k-color-primary) 7%, var(--k-card-bg));
-  }
-
-  .bundle-loading {
+  .bundle-all-label {
     color: var(--fg2);
   }
 
-  .bundle-bulk-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.65rem;
-    background: color-mix(in srgb, var(--k-color-primary) 4%, var(--k-side-bg));
-    border: 1px solid color-mix(in srgb, var(--k-color-primary) 12%, var(--k-color-border));
-    border-radius: 8px;
-    font-size: 0.76rem;
-
-    .bulk-label {
-      font-weight: 600;
-      color: var(--fg2);
-      margin-right: 0.4rem;
-    }
-
-    .bundle-section-spacer {
-      color: color-mix(in srgb, var(--fg3) 50%, transparent);
-      margin: 0 0.2rem;
-    }
-
-    .bundle-section-action {
-      border: none;
-      background: none;
-      color: var(--k-color-primary);
-      cursor: pointer;
-      // Native buttons don't inherit the page font.
-      font: inherit;
-      font-size: 0.74rem;
-      padding: 2px 6px;
-      border-radius: 6px;
-      transition: background 0.15s;
-      &:hover { background: color-mix(in srgb, var(--k-color-primary) 8%, transparent); }
-    }
+  .member-main .member-note {
+    margin-top: 0.25rem;
   }
 
-  // Equal columns would cut off the longest label on phones. Stacking them breaks the joined
-  // borders of the button group, so the columns size to their labels instead.
-  @media (max-width: 640px) {
-    .el-radio-group {
+  .bundle-summary {
+    margin: 1rem 0 0;
+    color: var(--fg3);
+    font-size: 0.8125rem;
+  }
+
+  @media (max-width: 768px) {
+    .bundle-member {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    // Long labels (English especially) would wrap the group into broken pieces. A three-column
+    // grid keeps it whole, sizes each button to its label and wraps a label only when it must.
+    .member-action {
+      display: grid;
       grid-template-columns: repeat(3, auto);
+
+      .el-radio-button,
+      .el-radio-button__inner {
+        display: flex;
+        height: 100%;
+      }
+
+      .el-radio-button__inner {
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        white-space: normal;
+        line-height: 1.3;
+      }
     }
   }
 }

@@ -10,7 +10,7 @@
     <template #header="{ titleId, titleClass }">
       <div class="bundle-title">
         <span :id="titleId" :class="titleClass">{{ title }}</span>
-        <span class="bundle-badge">{{ t('bundle.label') }}</span>
+        <span class="dialog-tag primary">{{ t('bundle.label') }}</span>
       </div>
       <div v-if="activeBundle" class="bundle-meta">{{ activeBundle.package.name }} · {{ bundleVersion }}</div>
     </template>
@@ -22,70 +22,69 @@
       </k-comment>
 
       <template v-else-if="bundle">
-        <p v-if="bundle.description" class="bundle-description">{{ bundle.description }}</p>
+        <p v-if="bundle.description" class="dialog-intro">{{ bundle.description }}</p>
 
         <k-comment v-if="validationErrors.length" type="danger">
+          <p>{{ t('bundle.messages.invalidManifest') }}</p>
           <p v-for="item in validationErrors" :key="item">{{ item }}</p>
         </k-comment>
         <k-comment v-if="validationWarnings.length" type="warning">
+          <p>{{ t('bundle.messages.manifestWarnings') }}</p>
           <p v-for="item in validationWarnings" :key="item">{{ item }}</p>
         </k-comment>
 
-        <div v-if="selectedMembers.length" class="bundle-bulk">
-          <span>{{ t('bundle.bulk.label') }}</span>
-          <el-button type="primary" text size="small" @click="batchSetCreateConfig(true)">{{ t('bundle.bulk.createAll') }}</el-button>
-          <el-button type="primary" text size="small" @click="batchSetCreateConfig(false)">{{ t('bundle.bulk.skipAll') }}</el-button>
-          <template v-if="selectedMembers.some(m => hasPreset(m))">
-            <el-button type="primary" text size="small" @click="batchSetUsePreset(true)">{{ t('bundle.bulk.enablePresets') }}</el-button>
-            <el-button type="primary" text size="small" @click="batchSetUsePreset(false)">{{ t('bundle.bulk.disablePresets') }}</el-button>
-          </template>
+        <!-- Select-all checkboxes for the per-member options below. -->
+        <div v-if="configTargets.length || presetTargets.length" class="bundle-bulk">
+          <el-checkbox v-if="configTargets.length" :model-value="allCreateConfig" :indeterminate="someCreateConfig" @change="batchSetCreateConfig">
+            {{ t('bundle.bulk.createAll') }}
+          </el-checkbox>
+          <el-checkbox v-if="presetTargets.length" :model-value="allUsePreset" :indeterminate="someUsePreset" @change="batchSetUsePreset">
+            {{ t('bundle.bulk.usePresets') }}
+          </el-checkbox>
         </div>
 
-        <section v-for="section in sections" :key="section.key" class="bundle-section">
-          <div class="bundle-section-title">
+        <section v-for="section in sections" :key="section.key" class="dialog-section">
+          <div class="dialog-section-title">
             <span>{{ section.label }}</span>
-            <span class="bundle-section-count">{{ section.members.length }}</span>
-            <el-button v-if="section.key === 'optional'" type="primary" text size="small" @click="toggleAllOptional">
-              {{ allOptionalSelected ? t('bundle.members.optionalToggleNone') : t('bundle.members.optionalToggleAll') }}
-            </el-button>
+            <span class="dialog-count">{{ section.members.length }}</span>
+            <span v-if="section.key === 'optional'" class="dialog-section-actions">
+              <el-button type="primary" text size="small" @click="toggleAllOptional">
+                {{ allOptionalSelected ? t('bundle.members.optionalToggleNone') : t('bundle.members.optionalToggleAll') }}
+              </el-button>
+            </span>
           </div>
-          <div class="bundle-member-list">
+          <div class="dialog-list">
             <div
               v-for="member in section.members"
               :key="member.package + ':' + member.plugin"
-              :class="['bundle-member', { selected: member.selected }]"
+              :class="['dialog-list-row', 'bundle-member', { optional: !member.required }]"
             >
-              <div class="member-row">
-                <el-checkbox v-model="member.selected" :disabled="member.required" :aria-label="member.package"></el-checkbox>
-                <div :class="['member-main', { toggle: !member.required }]" @click="!member.required && (member.selected = !member.selected)">
-                  <div class="member-line">
-                    <span class="member-name">{{ formatShortname(member.package) }}</span>
-                    <span class="member-version">{{ member.version }}</span>
-                    <span v-for="tag in riskTags(member)" :key="tag.label" :class="['member-risk', tag.type]">{{ tag.label }}</span>
-                  </div>
-                  <div class="member-sub">{{ member.package }} · {{ getInstalledText(member.package) }}</div>
-                  <p v-if="getPackageDescription(member.package)" class="member-desc">
-                    {{ getPackageDescription(member.package) }}
-                  </p>
+              <!-- Core members are always installed, so only optional ones get a checkbox. -->
+              <el-checkbox v-if="!member.required" v-model="member.selected" :aria-label="member.package"></el-checkbox>
+              <div :class="['member-main', { toggle: !member.required }]" @click="!member.required && (member.selected = !member.selected)">
+                <div class="member-line">
+                  <span class="member-name">{{ formatShortname(member.package) }}</span>
+                  <span class="member-version">{{ member.version }}</span>
+                  <span v-for="tag in riskTags(member)" :key="tag.label" :class="['dialog-tag', tag.type]">{{ tag.label }}</span>
                 </div>
+                <div class="member-sub">{{ member.package }} · {{ getInstalledText(member.package) }}</div>
+                <p v-if="getPackageDescription(member.package)" class="member-desc">
+                  {{ getPackageDescription(member.package) }}
+                </p>
               </div>
 
-              <template v-if="member.selected">
+              <div v-if="member.selected" class="member-details">
                 <div class="member-options">
                   <el-checkbox v-model="member.createConfig" :disabled="member.conflict === 'same-group'">{{ t('bundle.members.createConfig') }}</el-checkbox>
                   <el-checkbox v-if="member.conflict === 'other-config'" v-model="member.move">{{ t('bundle.members.moveConfig') }}</el-checkbox>
                   <el-checkbox v-model="member.usePreset" :disabled="!member.createConfig || member.move || !hasPreset(member)">{{ t('bundle.members.usePreset') }}</el-checkbox>
                 </div>
 
-                <k-comment v-if="member.conflict === 'package-mismatch'" type="danger" class="member-warning">
-                  <p>{{ t('bundle.conflict.version', { current: store.dependencies?.[member.package]?.resolved, range: member.version }) }}</p>
-                </k-comment>
-                <k-comment v-if="member.conflict === 'other-config'" type="warning" class="member-warning">
-                  <p>{{ t('bundle.conflict.config') }}</p>
-                </k-comment>
-                <k-comment v-if="member.conflict === 'same-group'" type="primary" class="member-warning">
-                  <p>{{ t('bundle.conflict.sameGroup') }}</p>
-                </k-comment>
+                <p v-if="versionMismatch(member)" class="member-note danger">
+                  {{ t('bundle.conflict.version', { current: store.dependencies?.[member.package]?.resolved, range: member.version }) }}
+                </p>
+                <p v-if="member.conflict === 'other-config'" class="member-note warning">{{ t('bundle.conflict.config') }}</p>
+                <p v-if="member.conflict === 'same-group'" class="member-note">{{ t('bundle.conflict.sameGroup') }}</p>
 
                 <div v-if="member.usePreset && sensitiveFields(member).length" class="sensitive-fields">
                   <div class="editor-title">{{ t('bundle.editor.sensitive') }}</div>
@@ -112,33 +111,25 @@
                     {{ t('bundle.editor.jsonError', { error: memberJsonErrors[getMemberKey(member)] }) }}
                   </div>
                 </details>
-              </template>
+              </div>
             </div>
           </div>
         </section>
 
-        <div class="bundle-diff">
-          <div class="bundle-diff-title">{{ t('bundle.diff.title') }}</div>
-          <dl>
-            <div>
-              <dt>{{ t('bundle.diff.install') }}</dt>
-              <dd>{{ installList.join(t('common.format.listSeparator')) }}</dd>
+        <div class="dialog-caption">{{ t('bundle.diff.title') }}</div>
+        <div class="dialog-list">
+          <div v-for="row in diffRows" :key="row.label" class="dialog-list-row diff-row">
+            <div class="diff-label">
+              {{ row.label }}
+              <span class="dialog-count">{{ row.items.length }}</span>
             </div>
-            <div v-if="configList.length">
-              <dt>{{ t('bundle.diff.config') }}</dt>
-              <dd>
-                {{ configList.map(item => presetList.includes(item) ? t('bundle.diff.withPreset', { name: item }) : item).join(t('common.format.listSeparator')) }}
-              </dd>
+            <div class="diff-items">
+              <!-- A manifest may list the same name twice, so the index is the key. -->
+              <span v-for="(item, index) in row.items" :key="index" :class="['dialog-tag', { primary: item.preset }]">
+                {{ item.name }}<template v-if="item.preset"> · {{ t('bundle.diff.preset') }}</template>
+              </span>
             </div>
-            <div v-if="moveList.length">
-              <dt>{{ t('bundle.diff.move') }}</dt>
-              <dd>{{ moveList.join(t('common.format.listSeparator')) }}</dd>
-            </div>
-            <div v-if="skippedConfigList.length">
-              <dt>{{ t('bundle.diff.skip') }}</dt>
-              <dd>{{ skippedConfigList.join(t('common.format.listSeparator')) }}</dd>
-            </div>
-          </dl>
+          </div>
         </div>
       </template>
     </template>
@@ -161,7 +152,6 @@ import {
   BundleInstallMember,
   BundleInstallResult,
   PluginBundleManifest,
-  hasBundleKeyword,
   parseBundleManifest,
   scanSensitiveConfig,
   validateBundleManifest,
@@ -196,9 +186,7 @@ const title = computed(() => activeBundle.value?.shortname || activeBundle.value
 const bundleVersion = computed(() => resolvedBundleVersion.value || activeBundle.value?.package.version || '')
 const validation = computed(() => {
   if (!activeBundle.value || !bundle.value) return { valid: false, errors: [], warnings: [] }
-  return validateBundleManifest(activeBundle.value.package.name, bundle.value, {
-    keyword: hasBundleKeyword(activeBundle.value.package.keywords),
-  })
+  return validateBundleManifest(activeBundle.value.package.name, bundle.value, { checkKeyword: false })
 })
 const validationErrors = computed(() => validation.value.errors)
 const validationWarnings = computed(() => validation.value.warnings)
@@ -215,25 +203,19 @@ function toggleAllOptional() {
   for (const m of optionalMembers.value) m.selected = target
 }
 
-const installList = computed(() => {
+// Names only: each member row already shows its full package name and version range, and a version
+// mismatch gets its own note, so repeating `package@range` here would turn the summary back into a
+// wall of text.
+const diffRows = computed(() => {
   if (!activeBundle.value) return []
+  const selected = selectedMembers.value
   return [
-    `${activeBundle.value.package.name}@${bundleVersion.value}`,
-    ...selectedMembers.value.map(member => `${member.package}@${member.version}`),
-  ]
+    { label: t('bundle.diff.install'), items: [activeBundle.value.package.name, ...selected.map(m => m.package)].map(name => ({ name: formatShortname(name) })) },
+    { label: t('bundle.diff.config'), items: selected.filter(m => m.createConfig && !m.move).map(m => ({ name: m.plugin, preset: m.usePreset })) },
+    { label: t('bundle.diff.move'), items: selected.filter(m => m.move).map(m => ({ name: m.plugin })) },
+    { label: t('bundle.diff.skip'), items: selected.filter(m => !m.createConfig && !m.move).map(m => ({ name: m.plugin })) },
+  ].filter(row => row.items.length)
 })
-const configList = computed(() => selectedMembers.value
-  .filter(member => member.createConfig && !member.move)
-  .map(member => member.plugin))
-const moveList = computed(() => selectedMembers.value
-  .filter(member => member.move)
-  .map(member => member.plugin))
-const presetList = computed(() => selectedMembers.value
-  .filter(member => member.createConfig && member.usePreset && !member.move)
-  .map(member => member.plugin))
-const skippedConfigList = computed(() => selectedMembers.value
-  .filter(member => !member.createConfig && !member.move)
-  .map(member => member.plugin))
 
 const memberJsonErrors = reactive<Record<string, string>>({})
 
@@ -302,15 +284,13 @@ watch(activeBundle, async (value) => {
       const conflictType = state.group.length ? 'same-group' : state.external.length ? 'other-config' : undefined
       
       const dep = store.dependencies?.[member.package]
-      const isMismatch = dep?.resolved && !satisfies(dep.resolved, member.version, { includePrerelease: true })
-      
       members.push({
         ...member,
-        selected: !!member.required || (!!dep && !isMismatch),
+        selected: !!member.required || (!!dep && !versionMismatch(member)),
         createConfig: !hasConfig && conflictType !== 'same-group',
         usePreset: !hasConfig && !!member.config && Object.keys(member.config).length > 0,
         move: false,
-        conflict: conflictType || (isMismatch ? 'package-mismatch' : undefined),
+        conflict: conflictType,
       })
     }
     const names = parsed.members.map(member => member.package).filter(name => !store.registry?.[name])
@@ -370,6 +350,12 @@ function riskTags(member: BundleInstallMember) {
   return tags
 }
 
+// Separate from `conflict`, which only describes config conflicts, so a member can have both.
+function versionMismatch(member: BundleInstallMember) {
+  const resolved = store.dependencies?.[member.package]?.resolved
+  return !!resolved && !satisfies(resolved, member.version, { includePrerelease: true })
+}
+
 function hasPreset(member: BundleInstallMember) {
   return !!member.config && Object.keys(member.config).length > 0
 }
@@ -387,23 +373,24 @@ function close() {
   activeBundle.value = undefined
 }
 
+// Members that already have a config elsewhere are left alone, since creating one would duplicate it.
+// The checkbox label says so.
+const configTargets = computed(() => selectedMembers.value.filter(m => m.conflict !== 'same-group' && m.conflict !== 'other-config'))
+const allCreateConfig = computed(() => configTargets.value.every(m => m.createConfig))
+const someCreateConfig = computed(() => !allCreateConfig.value && configTargets.value.some(m => m.createConfig))
+const presetTargets = computed(() => selectedMembers.value.filter(m => hasPreset(m) && m.createConfig && !m.move))
+const allUsePreset = computed(() => presetTargets.value.every(m => m.usePreset))
+const someUsePreset = computed(() => !allUsePreset.value && presetTargets.value.some(m => m.usePreset))
+
 function batchSetCreateConfig(value: boolean) {
-  for (const m of selectedMembers.value) {
-    if (m.conflict !== 'same-group') {
-      m.createConfig = value
-      if (!value) {
-        m.usePreset = false
-      }
-    }
+  for (const m of configTargets.value) {
+    m.createConfig = value
+    if (!value) m.usePreset = false
   }
 }
 
 function batchSetUsePreset(value: boolean) {
-  for (const m of selectedMembers.value) {
-    if (hasPreset(m) && m.createConfig && !m.move) {
-      m.usePreset = value
-    }
-  }
+  for (const m of presetTargets.value) m.usePreset = value
 }
 
 async function confirmInstall() {
@@ -521,6 +508,11 @@ function formatInstallError(error: unknown) {
     padding-right: 36px;
   }
 
+  .el-checkbox {
+    margin-right: 0;
+    height: 1.5rem;
+  }
+
   .bundle-title {
     display: flex;
     flex-wrap: wrap;
@@ -528,179 +520,59 @@ function formatInstallError(error: unknown) {
     gap: 0.5rem;
   }
 
-  .bundle-badge {
-    border-radius: 4px;
-    padding: 0 0.375rem;
-    color: var(--k-color-primary);
-    background: color-mix(in srgb, var(--k-color-primary) 12%, transparent);
-    font-size: 0.75rem;
-    line-height: 1.25rem;
-  }
-
-  .bundle-meta {
-    margin-top: 0.25rem;
-    color: var(--fg3);
-    font-size: 0.8125rem;
-    overflow-wrap: anywhere;
-  }
-
-  .bundle-state {
-    padding: 2rem 1rem;
-    color: var(--fg3);
-    text-align: center;
-  }
-
-  .bundle-description {
-    margin: 0 0 0.75rem;
-    color: var(--fg2);
-    line-height: 1.6;
-  }
-
   .bundle-bulk {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 0.25rem;
+    gap: 0.25rem 1.25rem;
     margin-bottom: 0.75rem;
-    color: var(--fg3);
-    font-size: 0.8125rem;
 
-    .el-button {
-      margin-left: 0;
+    // These labels are long, so they may wrap on phones.
+    .el-checkbox {
+      height: auto;
+      min-height: 1.5rem;
+      white-space: normal;
     }
   }
 
-  .bundle-section + .bundle-section {
-    margin-top: 1rem;
-  }
-
-  .bundle-section-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-
-    .el-button {
-      margin-left: auto;
-    }
-  }
-
-  .bundle-section-count {
-    border-radius: 10px;
-    padding: 0 0.375rem;
-    color: var(--fg2);
-    background: var(--k-side-bg);
-    font-size: 0.75rem;
-    font-weight: normal;
-    line-height: 1.25rem;
-  }
-
-  .bundle-member-list {
-    border: 1px solid var(--k-color-border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
+  // Optional members put a checkbox in front; everything after it lines up with the name.
   .bundle-member {
     display: grid;
-    gap: 0.5rem;
-    margin-top: -1px;
-    border-top: 1px solid var(--k-color-divider);
-    padding: 0.75rem 0.875rem;
-  }
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem 0.75rem;
 
-  .member-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
+    &.optional {
+      grid-template-columns: auto minmax(0, 1fr);
 
-    .el-checkbox {
-      height: 1.5rem;
+      .member-details {
+        grid-column: 2;
+      }
     }
   }
 
-  .member-main {
-    min-width: 0;
-    flex: 1 1 auto;
-
-    &.toggle {
-      cursor: pointer;
-    }
-  }
-
-  .member-line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
-  .member-name {
-    font-weight: 600;
-  }
-
-  .member-version {
-    color: var(--fg3);
-    font-size: 0.8125rem;
-  }
-
-  .member-risk {
-    border-radius: 4px;
-    padding: 0 0.375rem;
-    color: var(--fg2);
-    background: var(--k-side-bg);
-    font-size: 0.75rem;
-    line-height: 1.25rem;
-
-    &.success {
-      color: var(--k-color-success);
-      background: color-mix(in srgb, var(--k-color-success) 12%, transparent);
-    }
-
-    &.warning {
-      color: var(--warning);
-      background: color-mix(in srgb, var(--warning) 12%, transparent);
-    }
-
-    &.danger {
-      color: var(--danger);
-      background: color-mix(in srgb, var(--danger) 12%, transparent);
-    }
-  }
-
-  .member-sub {
-    color: var(--fg3);
-    font-size: 0.8125rem;
-    overflow-wrap: anywhere;
+  .member-main.toggle {
+    cursor: pointer;
   }
 
   .member-desc {
     margin: 0.25rem 0 0;
     color: var(--fg2);
     font-size: 0.8125rem;
-    line-height: 1.5;
+  }
+
+  .member-details {
+    display: grid;
+    gap: 0.5rem;
   }
 
   .member-options {
     display: flex;
     flex-wrap: wrap;
     gap: 0 1.25rem;
-    padding-left: 1.75rem;
-
-    .el-checkbox {
-      margin-right: 0;
-    }
-  }
-
-  .member-warning {
-    margin: 0 0 0 1.75rem;
   }
 
   .sensitive-fields {
     display: grid;
     gap: 0.5rem;
-    margin-left: 1.75rem;
 
     .editor-title {
       color: var(--fg2);
@@ -721,14 +593,10 @@ function formatInstallError(error: unknown) {
     }
   }
 
-  .member-config {
-    margin-left: 1.75rem;
-
-    summary {
-      color: var(--k-color-primary);
-      font-size: 0.8125rem;
-      cursor: pointer;
-    }
+  .member-config summary {
+    color: var(--k-color-primary);
+    font-size: 0.8125rem;
+    cursor: pointer;
   }
 
   .raw-json-editor {
@@ -756,51 +624,39 @@ function formatInstallError(error: unknown) {
     font-size: 0.8125rem;
   }
 
-  .bundle-diff {
-    margin-top: 1rem;
-    border: 1px solid var(--k-color-border);
-    border-radius: 8px;
-    padding: 0.75rem 0.875rem;
+  .diff-row {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.375rem 0.75rem;
+    padding-block: 0.625rem;
+  }
 
-    dl {
-      display: grid;
-      gap: 0.375rem;
-      margin: 0.5rem 0 0;
-    }
+  .diff-label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--fg2);
+  }
 
-    dl div {
-      display: grid;
-      grid-template-columns: 6rem minmax(0, 1fr);
-      gap: 0.75rem;
-    }
+  .diff-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    min-width: 0;
 
-    dt {
-      color: var(--fg3);
-    }
-
-    dd {
-      margin: 0;
+    .dialog-tag {
+      white-space: normal;
       overflow-wrap: anywhere;
     }
   }
 
-  .bundle-diff-title {
-    font-weight: 600;
-  }
 }
 
 @media (max-width: 768px) {
   .bundle-install-panel {
-    .member-options,
-    .member-warning,
-    .sensitive-fields,
-    .member-config {
-      margin-left: 0;
-      padding-left: 0;
-    }
-
     .editor-field,
-    .bundle-diff dl div {
+    .diff-row {
       grid-template-columns: 1fr;
       gap: 0.25rem;
     }

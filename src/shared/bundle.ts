@@ -43,7 +43,7 @@ export interface BundleInstallMember extends PluginBundleMember {
   selected: boolean
   createConfig: boolean
   usePreset: boolean
-  conflict?: 'same-group' | 'other-config' | 'package-mismatch'
+  conflict?: 'same-group' | 'other-config'
   move?: boolean
 }
 
@@ -116,7 +116,7 @@ function parseBundleMember(value: any): PluginBundleMember | undefined {
   }
 }
 
-export function validateBundleManifest(packageName: string, bundle?: PluginBundleManifest, options: { keyword?: boolean } = {}): PluginBundleValidation {
+export function validateBundleManifest(packageName: string, bundle?: PluginBundleManifest, options: { keyword?: boolean, checkKeyword?: boolean } = {}): PluginBundleValidation {
   const errors: string[] = []
   const warnings: string[] = []
   const normalizedName = packageName.toLowerCase()
@@ -129,7 +129,8 @@ export function validateBundleManifest(packageName: string, bundle?: PluginBundl
     return { valid: false, errors, warnings }
   }
   if (!bundle.members.length) errors.push('koishi.bundle.members must not be empty')
-  if (!options.keyword) warnings.push(`missing keyword "${BUNDLE_KEYWORD}"`)
+  // The install dialog turns this off: the missing keyword only matters to the bundle author.
+  if (options.checkKeyword !== false && !options.keyword) warnings.push(`missing keyword "${BUNDLE_KEYWORD}"`)
 
   const seen = new Set<string>()
   const seenPackages = new Set<string>()

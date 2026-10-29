@@ -15,7 +15,7 @@
     ></empty-state>
 
     <template v-else>
-      <p class="environment-intro">{{ t('environment.intro') }}</p>
+      <p class="dialog-intro">{{ t('environment.intro') }}</p>
 
       <div class="environment-layout">
         <el-scrollbar class="snapshot-list">
@@ -256,12 +256,6 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
 
 <style lang="scss">
 .environment-versions-dialog {
-  .environment-intro {
-    margin: 0 0 1rem;
-    color: var(--fg2);
-    line-height: 1.6;
-  }
-
   .environment-state {
     margin: 0;
     padding: 3rem 1rem;

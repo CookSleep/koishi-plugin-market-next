@@ -10,13 +10,13 @@ import {
   type BundleGroup,
 } from './plugin-config'
 import {
-  BUNDLE_KEYWORD,
   BundleInstallMember,
   BundleInstallRequest,
   BundleInstallResult,
   PluginBundleRecord,
   getBundleMemberIdent,
   getPluginShortname,
+  hasBundleKeyword,
   parseBundleManifest,
   validateBundleManifest,
 } from '../shared/bundle'
@@ -51,7 +51,7 @@ export async function installBundle(ctx: Context, dataStore: MarketDataStore, re
   if (!remote) throw new Error(`bundle package version not found: ${request.package}@${request.version}`)
   const bundle = parseBundleManifest((remote?.koishi as any)?.bundle)
   const validation = validateBundleManifest(request.package, bundle, {
-    keyword: remote?.keywords?.some(keyword => keyword.toLowerCase() === BUNDLE_KEYWORD),
+    keyword: hasBundleKeyword(remote?.keywords),
   })
   if (!validation.valid) {
     throw new Error(`invalid plugin bundle: ${validation.errors.join('; ')}`)

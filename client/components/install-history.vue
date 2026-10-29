@@ -26,7 +26,7 @@
           <span class="row-main">
             <span class="row-title">
               {{ historyTitle(entry) }}
-              <span :class="['status-tag', entry.status]">{{ statusText(entry.status) }}</span>
+              <span :class="['dialog-tag', statusTags[entry.status]]">{{ statusText(entry.status) }}</span>
             </span>
             <span class="row-packages">{{ historyPackages(entry) }}</span>
             <span class="row-meta">
@@ -45,7 +45,7 @@
             <div class="detail-title">
               <h3>
                 {{ historyTitle(detail) }}
-                <span :class="['status-tag', detail.status]">{{ statusText(detail.status) }}</span>
+                <span :class="['dialog-tag', statusTags[detail.status]]">{{ statusText(detail.status) }}</span>
               </h3>
               <p>
                 {{ formatDate(detail.startedAt) }}
@@ -74,7 +74,7 @@
             </div>
           </div>
 
-          <div class="log-title">{{ t('operations.history.logTitle') }}</div>
+          <div class="dialog-caption">{{ t('operations.history.logTitle') }}</div>
           <el-scrollbar ref="logScroll" class="log-content" view-class="log-content-view" tag="pre" max-height="16rem">{{ detail.content }}</el-scrollbar>
           <p v-if="detail.truncated" class="truncated-note">{{ t('operations.history.truncated') }}</p>
         </template>
@@ -186,6 +186,8 @@ async function copyLog() {
     message.error(t('operations.history.copyFailed'))
   }
 }
+
+const statusTags: Record<InstallHistoryEntry['status'], string> = { success: 'success', error: 'danger', running: 'primary', unknown: '' }
 
 function statusText(status: InstallHistoryEntry['status']) {
   switch (status) {
@@ -330,32 +332,6 @@ function formatSize(value: number) {
     color: var(--fg2);
   }
 
-  .status-tag {
-    flex: 0 0 auto;
-    border-radius: 4px;
-    padding: 0 0.375rem;
-    color: var(--fg2);
-    background: var(--k-side-bg);
-    font-size: 0.75rem;
-    font-weight: normal;
-    line-height: 1.25rem;
-
-    &.success {
-      color: var(--k-color-success);
-      background: color-mix(in srgb, var(--k-color-success) 12%, transparent);
-    }
-
-    &.error {
-      color: var(--danger);
-      background: color-mix(in srgb, var(--danger) 12%, transparent);
-    }
-
-    &.running {
-      color: var(--k-color-primary);
-      background: color-mix(in srgb, var(--k-color-primary) 12%, transparent);
-    }
-  }
-
   .history-detail {
     min-width: 0;
     min-height: 0;
@@ -455,12 +431,6 @@ function formatSize(value: number) {
     width: 0.875rem;
     height: 0.875rem;
     margin-right: 0.25rem;
-  }
-
-  .log-title {
-    margin: 1rem 0 0.5rem;
-    color: var(--fg3);
-    font-size: 0.8125rem;
   }
 
   .log-content {
