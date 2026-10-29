@@ -658,6 +658,9 @@ a.dep-name:hover {
 .is-row {
   display: grid;
   grid-template-columns: 2rem minmax(10rem, 2fr) minmax(0, 3fr) 14rem 7rem 2.25rem;
+  // The icon spans both rows; without a minimum, a one-line title leaves its extra height
+  // to the empty detail row and sits above center. 2.5rem matches a title plus package name.
+  grid-template-rows: minmax(2.5rem, auto) auto;
   grid-template-areas:
     'icon main summary version actions menu'
     'icon detail detail detail detail menu';
