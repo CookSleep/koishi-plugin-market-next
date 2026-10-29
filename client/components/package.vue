@@ -679,6 +679,11 @@ a.dep-name:hover {
   .dep-detail {
     margin-top: 0.125rem;
   }
+
+  // Without a menu, the buttons take its column so the row doesn't end in a gap.
+  .dep-actions:last-child {
+    grid-column: actions / -1;
+  }
 }
 
 @media (max-width: 768px) {
@@ -687,6 +692,10 @@ a.dep-name:hover {
 
     > .dep-summary {
       display: none;
+    }
+
+    .dep-actions:last-child {
+      grid-area: actions;
     }
   }
 }
