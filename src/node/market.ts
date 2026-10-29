@@ -96,7 +96,7 @@ class MarketProvider extends BaseMarketProvider {
         validatedAt: undefined,
         refreshing: false,
         debug: this.getDebugInfo(),
-      })
+      }, { authority: 4 })
       this.tempCache = {}
     }, 500)
     ctx.on('ready', () => {
