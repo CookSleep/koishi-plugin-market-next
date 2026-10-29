@@ -1,10 +1,10 @@
 <template>
-  <el-dialog
+  <market-dialog
     v-model="installProgressState.visible"
     append-to-body
     :show-close="installProgressState.status !== 'running'"
     :before-close="handleBeforeClose"
-    :class="['market-dialog', 'install-progress-dialog']"
+    class="install-progress-dialog"
     :title="installProgressState.title"
     width="760px"
   >
@@ -13,12 +13,12 @@
       {{ statusText }}
     </p>
 
-    <div ref="viewport" class="progress-log" :aria-label="t('operations.progress.logTitle')">
+    <el-scrollbar ref="viewport" class="progress-log" view-class="progress-log-view" :aria-label="t('operations.progress.logTitle')">
       <template v-if="installProgressState.logs.length">
         <div v-for="(log, index) in installProgressState.logs" :key="index" :class="['log-line', log.type]">{{ log.line }}</div>
       </template>
       <div v-else class="log-empty">{{ t('operations.progress.initializing') }}</div>
-    </div>
+    </el-scrollbar>
 
     <p v-if="installProgressState.fallbackCandidate" class="fallback-prompt">
       {{ t('operations.progress.fallbackPrefix') }}
@@ -39,17 +39,19 @@
         {{ installProgressState.status === 'running' ? t('operations.progress.executing') : t('operations.progress.close') }}
       </el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 </template>
 
 <script lang="ts" setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useMarketNextI18n } from '../i18n'
 import { installProgressState } from './utils'
+import MarketDialog from './market-dialog.vue'
 
 const { t } = useMarketNextI18n()
 
-const viewport = ref<HTMLElement>()
+// Left untyped for the same reason as the log scrollbar in install-history.vue.
+const viewport = ref()
 
 const statusText = computed(() => {
   if (installProgressState.environmentRestore) {
@@ -78,7 +80,7 @@ const statusText = computed(() => {
 watch(() => installProgressState.logs.length, () => {
   nextTick(() => {
     if (!viewport.value) return
-    viewport.value.scrollTop = viewport.value.scrollHeight
+    viewport.value.setScrollTop(viewport.value.wrapRef.scrollHeight)
   })
 })
 
@@ -130,14 +132,16 @@ function retryFallback() {
 
   .progress-log {
     height: min(24rem, 50vh);
-    overflow: auto;
     border: 1px solid var(--k-color-border);
     border-radius: 8px;
-    padding: 0.75rem 1rem;
     background: var(--k-side-bg);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.8125rem;
     line-height: 1.6;
+  }
+
+  .progress-log-view {
+    padding: 0.75rem 1rem;
   }
 
   .log-line {

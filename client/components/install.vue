@@ -1,5 +1,5 @@
 <template>
-  <el-dialog :model-value="!!active" @update:model-value="closePanel" :class="['market-dialog', 'install-panel', modeClass]" width="720px" destroy-on-close>
+  <market-dialog :model-value="!!active" @update:model-value="closePanel" :class="['install-panel', modeClass]" width="720px" destroy-on-close>
     <template v-if="active" #header="{ titleId, titleClass }">
       <span :id="titleId" :class="titleClass">
         {{ active + (localSelection ? ` (${t('dependencyCard.current.local')})` : '') }}
@@ -98,9 +98,9 @@
         </template>
       </div>
     </template>
-  </el-dialog>
+  </market-dialog>
 
-  <el-dialog v-model="showRemoveDialog" class="market-dialog market-remove-dialog" width="480px" destroy-on-close>
+  <market-dialog v-model="showRemoveDialog" class="market-remove-dialog" width="480px" destroy-on-close>
     {{ t('operations.install.removeConfigQuestion') }}
     <template #footer>
       <div class="left">
@@ -116,7 +116,7 @@
         <el-button type="primary" @click="installDep('', false, false)">{{ t('operations.install.keep') }}</el-button>
       </div>
     </template>
-  </el-dialog>
+  </market-dialog>
 
   <bundle-uninstall
     v-model="showBundleUninstallDialog"
@@ -138,6 +138,7 @@ import BundleUninstall from './bundle-uninstall.vue'
 import VersionPicker from './version-picker.vue'
 import { useMarketNextI18n } from '../i18n'
 import { getMarketObject } from '../market/state'
+import MarketDialog from './market-dialog.vue'
 
 const ctx = useContext()
 const config = useConfig()
@@ -467,7 +468,7 @@ function getResultText(peer: PeerInfo, name: string) {
     color: var(--k-color-danger);
   }
 
-  .el-dialog__body > div {
+  .market-dialog-body > div {
     margin: 1rem 0;
   }
 

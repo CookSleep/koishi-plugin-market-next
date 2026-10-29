@@ -1,7 +1,6 @@
 <template>
-  <el-dialog
+  <market-dialog
     v-model="ignoreVisible"
-    class="market-dialog"
     width="520px"
     append-to-body
     destroy-on-close
@@ -41,11 +40,10 @@
       <el-button @click="ignoreVisible = false">{{ t('dependencyCard.ignore.cancel') }}</el-button>
       <el-button type="primary" :loading="ignoreSaving.has(dependencyDialog.name)" @click="confirmIgnoreUpdate">{{ t('dependencyCard.ignore.confirm') }}</el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 
-  <el-dialog
+  <market-dialog
     v-model="localBindingVisible"
-    class="market-dialog"
     width="520px"
     append-to-body
     destroy-on-close
@@ -59,7 +57,7 @@
       <el-button @click="localBindingVisible = false">{{ t('dependencyCard.localBinding.cancel') }}</el-button>
       <el-button type="primary" :loading="bindingLocalPackages.has(dependencyDialog.name)" @click="confirmLocalBinding">{{ t('dependencyCard.localBinding.confirm') }}</el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 
   <bundle-uninstall
     v-model="bundleUninstallVisible"
@@ -84,6 +82,7 @@ import { bindingLocalPackages, dependencyDialog, DependencyDialogType, findBundl
 import BundleUninstall from './bundle-uninstall.vue'
 import PackageHistory from './package-history.vue'
 import { useMarketNextI18n } from '../i18n'
+import MarketDialog from './market-dialog.vue'
 
 const config = useConfig()
 const { t } = useMarketNextI18n()

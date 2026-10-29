@@ -1,9 +1,9 @@
 <template>
-  <el-dialog
+  <market-dialog
     v-model="dialogVisible"
     append-to-body
     destroy-on-close
-    :class="['market-dialog', 'install-history-dialog']"
+    class="install-history-dialog"
     :title="t('operations.history.title')"
     :width="entries.length ? '960px' : '520px'"
   >
@@ -15,7 +15,7 @@
     ></empty-state>
 
     <div v-else class="history-layout">
-      <div class="history-list">
+      <el-scrollbar class="history-list">
         <button
           v-for="entry in entries"
           :key="entry.id"
@@ -35,9 +35,9 @@
             </span>
           </span>
         </button>
-      </div>
+      </el-scrollbar>
 
-      <section class="history-detail">
+      <el-scrollbar class="history-detail" view-class="history-detail-view" tag="section">
         <div v-if="detailLoading" class="history-state">{{ t('operations.history.readingLog') }}</div>
         <div v-else-if="detailError" class="history-state error">{{ detailError }}</div>
         <template v-else-if="detail">
@@ -75,17 +75,17 @@
           </div>
 
           <div class="log-title">{{ t('operations.history.logTitle') }}</div>
-          <pre ref="logEl" class="log-content">{{ detail.content }}</pre>
+          <el-scrollbar ref="logScroll" class="log-content" view-class="log-content-view" tag="pre" max-height="16rem">{{ detail.content }}</el-scrollbar>
           <p v-if="detail.truncated" class="truncated-note">{{ t('operations.history.truncated') }}</p>
         </template>
-      </section>
+      </el-scrollbar>
     </div>
 
     <template #footer>
       <el-button :loading="loading" @click="loadHistory(true)">{{ t('operations.history.refresh') }}</el-button>
       <el-button @click="showInstallHistory = false">{{ t('operations.history.close') }}</el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -96,12 +96,15 @@ import type { InstallHistoryChange, InstallHistoryEntry, InstallLogDetail } from
 import { createSerialLoader, formatEndpoint, showInstallHistory, useDeferredDialog } from './utils'
 import EmptyState from './empty-state.vue'
 import { useMarketNextI18n } from '../i18n'
+import MarketDialog from './market-dialog.vue'
 
 const { t, locale } = useMarketNextI18n()
 const entries = ref<InstallHistoryEntry[]>([])
 const selectedId = ref('')
 const detail = ref<InstallLogDetail>()
-const logEl = ref<HTMLElement>()
+// Left untyped: element-plus is not a direct dependency (it comes with @koishijs/client), so its
+// ScrollbarInstance type is not imported, same as the scrollbar ref in market.vue.
+const logScroll = ref()
 const loading = ref(false)
 const detailLoading = ref(false)
 const loadError = ref('')
@@ -158,8 +161,8 @@ async function selectEntry(id: string, force = false) {
 }
 
 // A failed or interrupted operation logs why it stopped at the end.
-watch(logEl, (el) => {
-  if (el && detail.value?.status !== 'success') el.scrollTop = el.scrollHeight
+watch(logScroll, (scroll) => {
+  if (scroll && detail.value?.status !== 'success') scroll.setScrollTop(scroll.wrapRef.scrollHeight)
 })
 
 async function copyLog() {
@@ -277,7 +280,6 @@ function formatSize(value: number) {
 
   .history-list {
     min-height: 0;
-    overflow-y: auto;
     border-right: 1px solid var(--k-color-border);
   }
 
@@ -357,7 +359,9 @@ function formatSize(value: number) {
   .history-detail {
     min-width: 0;
     min-height: 0;
-    overflow-y: auto;
+  }
+
+  .history-detail-view {
     padding: 1rem 1.25rem;
   }
 
@@ -460,13 +464,14 @@ function formatSize(value: number) {
   }
 
   .log-content {
-    max-height: 16rem;
-    margin: 0;
-    overflow: auto;
     border-radius: 8px;
+    background: var(--k-side-bg);
+  }
+
+  .log-content-view {
+    margin: 0;
     padding: 0.75rem 1rem;
     color: var(--fg2);
-    background: var(--k-side-bg);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.75rem;
     line-height: 1.6;
@@ -491,13 +496,15 @@ function formatSize(value: number) {
     }
 
     .history-list {
-      max-height: 14rem;
       border-right: 0;
       border-bottom: 1px solid var(--k-color-border);
+
+      .el-scrollbar__wrap {
+        max-height: 14rem;
+      }
     }
 
-    .history-detail {
-      overflow: visible;
+    .history-detail-view {
       padding: 0.875rem;
     }
   }

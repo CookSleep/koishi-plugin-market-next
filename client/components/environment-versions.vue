@@ -1,9 +1,9 @@
 <template>
-  <el-dialog
+  <market-dialog
     v-model="dialogVisible"
     append-to-body
     destroy-on-close
-    :class="['market-dialog', 'environment-versions-dialog']"
+    class="environment-versions-dialog"
     :title="t('environment.title')"
     :width="hasHistory ? '1000px' : '520px'"
   >
@@ -18,7 +18,7 @@
       <p class="environment-intro">{{ t('environment.intro') }}</p>
 
       <div class="environment-layout">
-        <div class="snapshot-list">
+        <el-scrollbar class="snapshot-list">
           <button
             v-for="snapshot in snapshots"
             :key="snapshot.id"
@@ -37,9 +37,9 @@
               {{ t('environment.dependencies', { count: snapshot.dependencyCount }) }}
             </span>
           </button>
-        </div>
+        </el-scrollbar>
 
-        <section class="snapshot-detail">
+        <el-scrollbar class="snapshot-detail" view-class="snapshot-detail-view" tag="section">
           <div v-if="previewLoading" class="environment-state">{{ t('environment.readingPreview') }}</div>
           <div v-else-if="previewError" class="environment-state error">{{ previewError }}</div>
           <div v-else-if="preview?.snapshot.current" class="environment-state">{{ t('environment.isCurrent') }}</div>
@@ -82,7 +82,7 @@
 
             <p class="scope-note">{{ t('environment.scopeWarning') }}</p>
           </template>
-        </section>
+        </el-scrollbar>
       </div>
     </template>
 
@@ -93,12 +93,12 @@
         {{ t('environment.restore') }}
       </el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 
-  <el-dialog
+  <market-dialog
     v-model="confirmVisible"
     append-to-body
-    :class="['market-dialog', 'environment-confirm-dialog']"
+    class="environment-confirm-dialog"
     :title="t('environment.confirmTitle')"
     width="520px"
   >
@@ -111,7 +111,7 @@
       <el-button @click="confirmVisible = false">{{ t('common.actions.cancel') }}</el-button>
       <el-button type="primary" @click="applySnapshot">{{ t('environment.confirmRestore') }}</el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -127,6 +127,7 @@ import type {
 import { applyEnvironmentSnapshot, createSerialLoader, showEnvironmentVersions, useDeferredDialog } from './utils'
 import { useMarketNextI18n } from '../i18n'
 import EmptyState from './empty-state.vue'
+import MarketDialog from './market-dialog.vue'
 
 const { t, locale } = useMarketNextI18n()
 const snapshots = ref<EnvironmentSnapshotSummary[]>([])
@@ -283,7 +284,6 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
 
   .snapshot-list {
     min-height: 0;
-    overflow-y: auto;
     border-right: 1px solid var(--k-color-border);
   }
 
@@ -348,7 +348,9 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
   .snapshot-detail {
     min-width: 0;
     min-height: 0;
-    overflow-y: auto;
+  }
+
+  .snapshot-detail-view {
     padding: 1rem 1.25rem;
   }
 
@@ -494,7 +496,7 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
 // Only the lead paragraph loses its top margin. The ones inside k-comment keep both margins,
 // which the comment relies on to center its text, and the last comment sits on the footer.
 .environment-confirm-dialog {
-  .el-dialog__body > p {
+  .market-dialog-body > p {
     margin-top: 0;
   }
 
@@ -511,13 +513,15 @@ function reasonText(reason: NonNullable<EnvironmentSnapshotChange['reason']>) {
     }
 
     .snapshot-list {
-      max-height: 12rem;
       border-right: 0;
       border-bottom: 1px solid var(--k-color-border);
+
+      .el-scrollbar__wrap {
+        max-height: 12rem;
+      }
     }
 
-    .snapshot-detail {
-      overflow: visible;
+    .snapshot-detail-view {
       padding: 0.875rem;
     }
 

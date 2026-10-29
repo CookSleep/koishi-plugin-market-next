@@ -1,9 +1,9 @@
 <template>
-  <el-dialog
+  <market-dialog
     v-model="showManual"
     append-to-body
     align-center
-    class="market-dialog manual-panel"
+    class="manual-panel"
     destroy-on-close
     width="640px"
     :close-on-click-modal="!busy"
@@ -81,7 +81,7 @@
         </el-button>
       </template>
     </template>
-  </el-dialog>
+  </market-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -93,6 +93,7 @@ import { useLocalPackageUpload } from '../composables/use-local-package-upload'
 import { useMarketNextI18n } from '../i18n'
 import { getPendingOverrides, patchMarketNextData } from '../utils'
 import { addManual, showManual } from './utils'
+import MarketDialog from './market-dialog.vue'
 
 type ManualMode = 'local' | 'registry'
 

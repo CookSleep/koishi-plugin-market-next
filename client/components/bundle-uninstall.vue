@@ -1,8 +1,8 @@
 <template>
-  <el-dialog
+  <market-dialog
     v-model="visible"
     append-to-body
-    :class="['market-dialog', 'bundle-uninstall-dialog']"
+    class="bundle-uninstall-dialog"
     :title="title || t('bundle.actions.uninstall')"
     width="720px"
     destroy-on-close
@@ -33,7 +33,7 @@
             <button class="bundle-section-action" @click="setAllActions('keep')">{{ t('bundle.bulk.keepAll') }}</button>
           </div>
 
-          <div class="bundle-member-list">
+          <el-scrollbar max-height="46vh" view-class="bundle-member-list">
             <section v-for="row in memberRows" :key="row.package" class="bundle-member-option">
               <div class="member-main">
                 <span class="member-title">{{ row.package }}</span>
@@ -58,7 +58,7 @@
                 {{ t('bundle.conflict.externalNote') }}
               </p>
             </section>
-          </div>
+          </el-scrollbar>
         </template>
 
         <k-comment v-else>
@@ -88,7 +88,7 @@
         {{ t('bundle.actions.uninstall') }}
       </el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 </template>
 
 <script setup lang="ts">
@@ -106,6 +106,7 @@ import {
 } from './utils'
 import { getBulkMode, getPendingOverrides, getWritableBundleRecords, patchMarketNextData } from '../utils'
 import { useMarketNextI18n } from '../i18n'
+import MarketDialog from './market-dialog.vue'
 
 type MemberAction = 'config' | 'dependency' | 'keep'
 
@@ -352,9 +353,8 @@ async function uninstallBundle() {
   .bundle-member-list {
     display: grid;
     gap: 0.55rem;
-    max-height: 46vh;
-    overflow: auto;
-    padding-right: 0.25rem;
+    // Room for the overlaid scrollbar.
+    padding-right: 0.625rem;
   }
 
   .bundle-member-option {

@@ -1,8 +1,8 @@
 <template>
-  <el-dialog
+  <market-dialog
     :model-value="!!activeBundle"
     append-to-body
-    :class="['market-dialog', 'bundle-install-panel']"
+    class="bundle-install-panel"
     width="800px"
     destroy-on-close
     @update:model-value="close"
@@ -149,7 +149,7 @@
         {{ t('bundle.actions.install') }}<template v-if="selectedMembers.length"> ({{ selectedMembers.length }})</template>
       </el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 </template>
 
 <script setup lang="ts">
@@ -179,6 +179,7 @@ import {
 import { satisfies } from 'semver'
 import { useMarketNextI18n } from '../i18n'
 import { getMarketObject, loadMarketObjects } from '../market/state'
+import MarketDialog from './market-dialog.vue'
 
 const loading = ref(false)
 const installing = ref(false)

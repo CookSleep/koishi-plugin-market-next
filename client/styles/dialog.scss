@@ -13,13 +13,21 @@
     justify-content: center;
   }
 
-  .el-dialog__body {
-    max-height: calc(100vh - 14rem);
-    overflow-y: auto;
-    // k-comment hangs its icon 12px past the left edge, which the scroll box would clip.
-    // Extend the box into the dialog padding and pad it back so the content stays put.
-    margin-left: -12px;
-    padding-left: 12px;
+  // market-dialog.vue wraps the body in el-scrollbar so long content scrolls with the same
+  // scrollbar as the pages.
+  .market-dialog-scroll {
+    // k-comment hangs its icon 12px past the left edge, which the scroll box would clip, and the
+    // overlaid thumb would cover the right edge. Extend the box into the dialog padding on both
+    // sides and pad it back so the content stays put.
+    margin: 0 -12px;
+
+    > .el-scrollbar__wrap {
+      max-height: calc(100vh - 14rem);
+    }
+
+    .market-dialog-body {
+      padding: 0 12px;
+    }
   }
 
   // Element Plus gives disabled plain buttons a fixed light-theme grey, which stays bright in dark mode.
@@ -44,7 +52,7 @@
   .el-overlay-dialog .market-dialog {
     max-width: none;
 
-    .el-dialog__body {
+    .market-dialog-scroll > .el-scrollbar__wrap {
       max-height: 70vh;
     }
   }

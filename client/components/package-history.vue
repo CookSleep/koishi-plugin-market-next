@@ -1,10 +1,10 @@
 <template>
-  <el-dialog
+  <market-dialog
     v-model="open"
     append-to-body
     align-center
     destroy-on-close
-    :class="['market-dialog', 'package-history-dialog']"
+    class="package-history-dialog"
     :title="t('operations.timeline.title', { name: packageName })"
     width="520px"
   >
@@ -67,7 +67,7 @@
         {{ t('operations.timeline.useVersion') }}
       </el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -77,6 +77,7 @@ import type { InstallPackageHistory, InstallPackageHistoryEntry } from 'koishi-p
 import { useMarketNextI18n } from '../i18n'
 import MarketIcon from '../market/icons'
 import EmptyState from './empty-state.vue'
+import MarketDialog from './market-dialog.vue'
 
 const props = defineProps<{
   modelValue: boolean

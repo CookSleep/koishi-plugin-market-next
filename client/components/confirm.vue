@@ -1,8 +1,8 @@
 <template>
-  <el-dialog
+  <market-dialog
     v-if="store.market?.registry"
     v-model="showConfirm"
-    :class="['market-dialog', 'confirm-panel']"
+    class="confirm-panel"
     :title="t('operations.confirm.title')"
     width="640px"
     destroy-on-close
@@ -25,7 +25,7 @@
       <el-button @click="showConfirm = false">{{ t('common.actions.cancel') }}</el-button>
       <el-button type="primary" @click="confirm">{{ t('operations.confirm.apply') }}</el-button>
     </template>
-  </el-dialog>
+  </market-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -35,6 +35,7 @@ import { message, send, store, useContext, useConfig } from '@koishijs/client'
 import { ensureInstalledConfigs, getConfigWriter, showConfirm, install, pendingBundleUninstalls, MARKET_NEXT_PACKAGE } from './utils'
 import { getPendingOverrides, getRemoveConfig, getWritableBundleRecords, patchMarketNextData } from '../utils'
 import { useMarketNextI18n } from '../i18n'
+import MarketDialog from './market-dialog.vue'
 
 const ctx = useContext()
 const config = useConfig()
