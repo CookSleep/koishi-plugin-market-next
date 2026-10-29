@@ -50,7 +50,6 @@ actions:
   update: 更新
   ignore: 忽略此更新
   remove: 卸载
-  current: （当前）
   undo: 撤销
   more: 更多操作
   pickVersion: 切换版本

@@ -50,7 +50,6 @@ actions:
   update: Update
   ignore: Ignore this update
   remove: Uninstall
-  current: (current)
   undo: Undo
   more: More actions
   pickVersion: Change version

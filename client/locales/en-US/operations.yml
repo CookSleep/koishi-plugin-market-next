@@ -36,9 +36,6 @@ install:
   waitingInstall: Waiting to install
   downloaded: Downloaded
   select: Select
-  added: Dependency added.
-  addFailed: Failed to add dependency!
-  addTimeout: Adding dependency timed out!
   uninstalling: Uninstalling plugin…
   uninstalled: Uninstalled successfully!
   uninstallFailed: Uninstall failed!
@@ -96,7 +93,6 @@ progress:
   errorSelf: market-next update failed. Check the console output.
   errorDependencies: Dependency installation failed. Check the console output.
   ready: Ready
-  applyTitle: Applying dependency changes
   selfUpdateTitle: Updating market-next…
   dependencyTitle: Updating dependencies…
   submitted: Dependency changes submitted. Waiting for the package manager…

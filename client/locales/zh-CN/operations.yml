@@ -36,9 +36,6 @@ install:
   waitingInstall: 等待安装
   downloaded: 已下载
   select: 选择
-  added: 依赖已添加。
-  addFailed: 依赖添加失败！
-  addTimeout: 依赖添加超时！
   uninstalling: 正在卸载插件……
   uninstalled: 卸载成功！
   uninstallFailed: 卸载失败！
@@ -96,7 +93,6 @@ progress:
   errorSelf: market-next 更新失败，请检查控制台输出。
   errorDependencies: 依赖安装失败，请检查控制台输出。
   ready: 准备就绪
-  applyTitle: 正在应用依赖更改
   selfUpdateTitle: 正在更新 market-next……
   dependencyTitle: 正在更新依赖……
   submitted: 已提交依赖变更，正在等待后端启动包管理器……
