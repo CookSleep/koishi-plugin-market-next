@@ -27,16 +27,8 @@
           <span>{{ t('bundle.members.title') }}</span>
           <span class="dialog-count">{{ memberRows.length }}</span>
         </div>
-        <div class="dialog-list">
-          <!-- Works like a select-all: picks the same action for every member, and shows one only while all members match it. -->
-          <div class="dialog-list-row bundle-member bundle-all">
-            <span class="bundle-all-label">{{ t('bundle.members.all') }}</span>
-            <el-radio-group :model-value="commonAction" size="small" class="member-action" @change="setAllActions">
-              <el-radio-button value="config" :disabled="!memberRows.some(row => row.hasGroupConfig)">{{ t('bundle.members.cleanGroupConfig') }}</el-radio-button>
-              <el-radio-button value="dependency" :disabled="!memberRows.some(row => row.canRemoveDependency)">{{ t('bundle.members.removeDependency') }}</el-radio-button>
-              <el-radio-button value="keep">{{ t('bundle.members.keep') }}</el-radio-button>
-            </el-radio-group>
-          </div>
+        <div class="dialog-list" :style="{ '--bundle-columns': columns.length }">
+          <bundle-all-row :columns="columns"></bundle-all-row>
           <div v-for="row in memberRows" :key="row.package" class="dialog-list-row bundle-member">
             <div class="member-main">
               <div class="member-line">
@@ -52,11 +44,18 @@
               </div>
               <p v-if="row.hasExternalConfig" class="member-note warning">{{ t('bundle.conflict.externalNote') }}</p>
             </div>
-            <el-radio-group v-model="memberActions[row.package]" size="small" class="member-action">
-              <el-radio-button value="config" :disabled="!row.hasGroupConfig">{{ t('bundle.members.cleanGroupConfig') }}</el-radio-button>
-              <el-radio-button value="dependency" :disabled="!row.canRemoveDependency">{{ t('bundle.members.removeDependency') }}</el-radio-button>
-              <el-radio-button value="keep">{{ t('bundle.members.keep') }}</el-radio-button>
-            </el-radio-group>
+            <el-checkbox
+              :model-value="cleans(row)"
+              :disabled="!row.hasGroupConfig"
+              :aria-label="`${t('bundle.members.cleanConfig')}: ${row.package}`"
+              @update:model-value="setChoice(row, 'clean', !!$event)"
+            ></el-checkbox>
+            <el-checkbox
+              :model-value="removes(row)"
+              :disabled="!row.canRemoveDependency"
+              :aria-label="`${t('bundle.members.removeDependency')}: ${row.package}`"
+              @update:model-value="setChoice(row, 'remove', !!$event)"
+            ></el-checkbox>
           </div>
         </div>
       </section>
@@ -65,10 +64,10 @@
         <p>{{ t('bundle.messages.noMembers') }}</p>
       </k-comment>
 
-      <p class="bundle-summary">
-        {{ t('bundle.summary.text', { remove: dependencyRemovalCount, clean: configCleanupCount, keep: keepCount }) }}
-        {{ t('bundle.messages.outsideConfig') }}
-      </p>
+      <template v-if="!loadingRecord">
+        <bundle-diff :rows="diffRows"></bundle-diff>
+        <p class="bundle-outside-note">{{ t('bundle.messages.outsideConfig') }}</p>
+      </template>
     </template>
     <k-comment v-else type="warning">
       <p>{{ t('bundle.messages.noDependency') }}</p>
@@ -99,9 +98,9 @@ import {
 } from './utils'
 import { getBulkMode, getPendingOverrides, getWritableBundleRecords, patchMarketNextData } from '../utils'
 import { useMarketNextI18n } from '../i18n'
+import BundleAllRow from './bundle-all-row.vue'
+import BundleDiff from './bundle-diff.vue'
 import MarketDialog from './market-dialog.vue'
-
-type MemberAction = 'config' | 'dependency' | 'keep'
 
 const protectedDeps = new Set(['@koishijs/plugin-console', '@koishijs/plugin-config', '@koishijs/plugin-server'])
 
@@ -121,28 +120,38 @@ const emit = defineEmits<{
 const config = useConfig()
 const { t } = useMarketNextI18n()
 
-// A member that can't take the requested action falls back to the next milder one.
-function getAllAction(row: typeof memberRows.value[number], action: MemberAction): MemberAction {
-  if (action === 'dependency' && row.canRemoveDependency) return 'dependency'
-  if (action !== 'keep' && row.hasGroupConfig) return 'config'
-  return 'keep'
-}
-
-function setAllActions(action: MemberAction) {
-  for (const row of memberRows.value) memberActions[row.package] = getAllAction(row, action)
-}
-
-const commonAction = computed(() => {
-  return (['keep', 'config', 'dependency'] as const).find(action => {
-    return memberRows.value.every(row => memberActions[row.package] === getAllAction(row, action))
-  })
+// Cleaning the config and uninstalling the dependency are independent: like Koishi's own uninstall,
+// a dependency can go while its config stays in the bundle group for a later reinstall. That is
+// intended, not a leftover. Each column of the "all members" row covers the members that have that
+// option, and a bulk "uninstall" only checks dependencies the bundle installed itself, like the
+// default; ones the user installed before the bundle need their own row checked.
+const columns = computed(() => {
+  const removable = memberRows.value.filter(row => row.canRemoveDependency)
+  return [
+    {
+      label: t('bundle.members.cleanConfig'),
+      members: memberRows.value.filter(row => row.hasGroupConfig),
+      get: cleans,
+      set: (row: MemberRow, value: boolean) => setChoice(row, 'clean', value),
+    },
+    {
+      label: t('bundle.members.removeDependency'),
+      members: removable,
+      targets: removable.filter(row => row.installedByBundle === true),
+      get: removes,
+      set: (row: MemberRow, value: boolean) => setChoice(row, 'remove', value),
+    },
+  ]
 })
 const ctx = useContext()
 const loadingRecord = ref(false)
 let loadSerial = 0
 const uninstalling = ref(false)
 const remoteRecord = ref<BundleRecordView>()
-const memberActions = reactive<Record<string, MemberAction>>({})
+// Only the choices the user changed are stored; anything else falls back to the default, so rows that
+// appear or gain an option need no setup. Keyed by package: a manifest that lists a package twice
+// already gets a validation warning.
+const choices = reactive<Record<string, { clean?: boolean, remove?: boolean }>>({})
 
 const packageName = computed(() => props.packageName || '')
 const visible = computed({
@@ -175,18 +184,32 @@ const memberRows = computed(() => {
   })
 })
 
-const dependencyRemovalMembers = computed(() => memberRows.value
-  .filter(row => memberActions[row.package] === 'dependency' && row.canRemoveDependency))
-const configCleanupMembers = computed(() => memberRows.value
-  .filter(row => memberActions[row.package] === 'dependency' || memberActions[row.package] === 'config')
-  .filter(row => row.hasGroupConfig))
-const dependencyRemovalCount = computed(() => dependencyRemovalMembers.value.length)
-const configCleanupCount = computed(() => configCleanupMembers.value.length)
-const keepCount = computed(() => Math.max(0, memberRows.value.length - new Set([
-  ...dependencyRemovalMembers.value.map(row => row.package),
-  ...configCleanupMembers.value.map(row => row.package),
-]).size))
+type MemberRow = (typeof memberRows.value)[number]
 
+// Whether a member's config is cleaned and its dependency removed. Group configs are cleaned by default,
+// and only dependencies the bundle installed itself are removed by default.
+function cleans(row: MemberRow) {
+  return row.hasGroupConfig && (choices[row.package]?.clean ?? true)
+}
+
+function removes(row: MemberRow) {
+  return row.canRemoveDependency && (choices[row.package]?.remove ?? row.installedByBundle === true)
+}
+
+function setChoice(row: MemberRow, key: 'clean' | 'remove', value: boolean) {
+  (choices[row.package] ||= {})[key] = value
+}
+
+const dependencyRemovalMembers = computed(() => memberRows.value.filter(removes))
+const configCleanupMembers = computed(() => memberRows.value.filter(cleans))
+// Kept configs get their own row, so it is clear which ones stay behind in the bundle group.
+const diffRows = computed(() => [
+  { label: t('bundle.diff.uninstall'), items: [packageName.value, ...dependencyRemovalMembers.value.map(row => row.package)].map(name => ({ name: formatShortname(name) })) },
+  { label: t('bundle.diff.clean'), items: configCleanupMembers.value.map(row => ({ name: formatShortname(row.package) })) },
+  { label: t('bundle.diff.keepConfig'), items: memberRows.value.filter(row => row.hasGroupConfig && !cleans(row)).map(row => ({ name: formatShortname(row.package) })) },
+])
+
+// The dialog is modal, so its bundle can't change while it is open; choices reset each time it opens.
 watch(visible, async (value, previous) => {
   if (!value) {
     if (!previous) return
@@ -196,18 +219,16 @@ watch(visible, async (value, previous) => {
     return
   }
   remoteRecord.value = undefined
-  if (await loadRecord()) resetActions()
+  // Reopening starts from the defaults again.
+  Object.keys(choices).forEach(key => delete choices[key])
+  await loadRecord()
 }, { immediate: true })
 
-watch(memberRows, () => {
-  if (visible.value) resetActions(false)
-})
-
-// Returns false when a newer load has started, e.g. the dialog was reopened for another bundle.
+// The serial drops the result of a load that a newer one replaced, e.g. the dialog was reopened for another bundle.
 async function loadRecord() {
   const serial = ++loadSerial
   const name = packageName.value
-  if (!name || props.record?.members?.length) return true
+  if (!name || props.record?.members?.length) return
   loadingRecord.value = true
   try {
     const record = await fetchBundleRecord(name)
@@ -218,26 +239,6 @@ async function loadRecord() {
   } finally {
     if (serial === loadSerial) loadingRecord.value = false
   }
-  return serial === loadSerial
-}
-
-function resetActions(force = true) {
-  const seen = new Set<string>()
-  for (const row of memberRows.value) {
-    seen.add(row.package)
-    if (!force && memberActions[row.package]) continue
-    memberActions[row.package] = getDefaultAction(row)
-  }
-  for (const key of Object.keys(memberActions)) {
-    if (!seen.has(key)) delete memberActions[key]
-  }
-}
-
-function getDefaultAction(row: (typeof memberRows.value)[number]): MemberAction {
-  if (row.hasExternalConfig) return row.hasGroupConfig ? 'config' : 'keep'
-  if (row.canRemoveDependency && row.installedByBundle === true) return 'dependency'
-  if (row.hasGroupConfig) return 'config'
-  return 'keep'
 }
 
 function ensureOverride() {
@@ -286,6 +287,8 @@ async function uninstallBundle() {
           removeEmptyGroup: true,
         })
       }
+      // Configs the user chose to keep stay behind in the bundle group, which then becomes an ordinary
+      // group on the plugin config page, like the configs Koishi keeps when one plugin is uninstalled.
       const records = getWritableBundleRecords(config.value)
       delete records[name]
       const saved = await patchMarketNextData({ bundleRecords: records })
@@ -313,57 +316,16 @@ async function uninstallBundle() {
     padding-right: 36px;
   }
 
-  .bundle-member {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.5rem 1rem;
-  }
-
-  .bundle-all {
-    background: var(--k-side-bg);
-  }
-
-  .bundle-all-label {
-    color: var(--fg2);
-  }
-
   .member-main .member-note {
     margin-top: 0.25rem;
   }
 
-  .bundle-summary {
+  .bundle-outside-note {
     margin: 1rem 0 0;
     color: var(--fg3);
     font-size: 0.8125rem;
   }
 
-  @media (max-width: 768px) {
-    .bundle-member {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    // Long labels (English especially) would wrap the group into broken pieces. A three-column
-    // grid keeps it whole, sizes each button to its label and wraps a label only when it must.
-    .member-action {
-      display: grid;
-      grid-template-columns: repeat(3, auto);
-
-      .el-radio-button,
-      .el-radio-button__inner {
-        display: flex;
-        height: 100%;
-      }
-
-      .el-radio-button__inner {
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        white-space: normal;
-        line-height: 1.3;
-      }
-    }
-  }
 }
 
 </style>

@@ -42,12 +42,6 @@
     --el-button-disabled-border-color: transparent;
   }
 
-  // Same for disabled radio buttons. A selected one keeps its fill so the choice stays visible.
-  .el-radio-button.is-disabled:not(.is-active) .el-radio-button__inner {
-    color: var(--fg3);
-    background: transparent;
-  }
-
   // A checked checkbox keeps the normal text color; the box already shows the state.
   // Disabled ones keep Element Plus's muted color.
   .el-checkbox__input.is-checked:not(.is-disabled) + .el-checkbox__label {
@@ -77,8 +71,8 @@
   }
 }
 
-// Shared pieces for dialogs that list items: a heading with a count and optional text actions,
-// a bordered list with divider rows, and small status tags.
+// Shared pieces for dialogs that list items: a heading with a count, a bordered list with divider
+// rows, and small status tags.
 .market-dialog {
   .dialog-section + .dialog-section {
     margin-top: 1rem;
@@ -91,17 +85,6 @@
     gap: 0.25rem 0.5rem;
     margin-bottom: 0.5rem;
     font-weight: 600;
-  }
-
-  .dialog-section-actions {
-    display: flex;
-    flex-wrap: wrap;
-    margin-left: auto;
-    font-weight: normal;
-
-    .el-button {
-      margin-left: 0;
-    }
   }
 
   .dialog-count {

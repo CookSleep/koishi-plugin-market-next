@@ -1,17 +1,13 @@
 label: Plugin bundle
 loading: Reading plugin bundle manifest…
-bulk:
-  createAll: Create configs (except for members configured outside the bundle)
-  usePresets: Use preset configs for all members
 members:
   title: Members
-  all: All members
   required: Required members
   optional: Optional members
+  all: All members
   requiredTag: Required
   optionalTag: Optional
-  optionalToggleAll: Select all
-  optionalToggleNone: Deselect all
+  install: Install
   createConfig: Create config
   moveConfig: Move existing config
   usePreset: Use preset
@@ -24,9 +20,8 @@ members:
   groupConfig: Bundle config
   externalConfig: External config exists
   workspace: Workspace dependency
-  cleanGroupConfig: Clean config only
-  removeDependency: Uninstall and clean
-  keep: Keep
+  cleanConfig: Clean config
+  removeDependency: Uninstall
   marketMissing: Not in market index
   verified: Market verified
   insecure: Security risk
@@ -38,12 +33,13 @@ conflict:
   version: 'Version conflict: the installed version is {current}, which does not satisfy the bundle range {range}. Installation will replace this dependency!'
   config: 'Config conflict: this plugin already has a config outside the bundle, so none is created inside it by default. Check “Create config” to add a separate disabled copy, or “Move existing config” to move the current one into the bundle.'
   sameGroup: 'Config exists: this plugin already has a config in the bundle group. Config creation is skipped while the dependency is ensured.'
-  externalNote: 'A root-level or other-group config exists. Only the copy in this bundle group will be cleaned; the member dependency will not be uninstalled.'
+  externalNote: This plugin is also configured at the root or in another group, so its dependency is not uninstalled.
 editor:
   sensitive: 'Edit sensitive preset config:'
   placeholder: 'Enter {field}'
   viewPreset: View / edit preset
   jsonError: 'Invalid JSON: {error}'
+  notObject: The preset must be a JSON object.
 diff:
   title: About to execute
   install: Install dependencies
@@ -51,11 +47,13 @@ diff:
   preset: preset
   move: Move configs
   skip: Skip configs
+  uninstall: Uninstall
+  clean: Clean configs
+  keepConfig: Kept configs
 actions:
   cancel: Cancel
   install: Install plugin bundle
   uninstall: Uninstall plugin bundle
-  uninstallOnly: Uninstall bundle only
 messages:
   uninstallIntro: The bundle itself will be uninstalled. Choose how to handle each member below.
   invalidManifest: 'The bundle manifest is invalid and cannot be installed:'
@@ -67,7 +65,7 @@ messages:
   recordFailed: Could not read the plugin bundle members; only the bundle itself will be uninstalled.
   noMembers: No manageable members were found. Only the plugin bundle itself will be uninstalled.
   noDependency: No plugin bundle dependency was found for this group.
-  outsideConfig: Config outside the bundle group is never deleted; a member with external config is not uninstalled by default.
+  outsideConfig: Config outside the bundle group is never deleted, and a member with config outside the bundle is never uninstalled.
   submitted: Plugin bundle installation submitted. Waiting for dependency and config processing…
   installing: Installing plugin bundle…
   waiting: Still waiting for package manager output. A bundle processes multiple members and may take longer on a slow network.
@@ -84,5 +82,3 @@ messages:
   uninstalled: Plugin bundle uninstalled successfully!
   uninstallFailed: Plugin bundle uninstall failed!
   uninstallTimeout: Plugin bundle uninstall timed out!
-summary:
-  text: 'Member dependencies to uninstall: {remove}. Bundle configs to clean: {clean}. Members to keep: {keep}.'

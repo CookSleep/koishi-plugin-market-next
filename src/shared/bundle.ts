@@ -193,11 +193,22 @@ export function getBundleMemberIdent(packageName: string, member: Pick<PluginBun
   return `pa-${normalizeBundleIdent(getPluginShortname(packageName))}-${normalizeBundleIdent(getPluginShortname(member.plugin || member.package))}`
 }
 
-export function scanSensitiveConfig(value: unknown, path = ''): string[] {
-  const result: string[] = []
+// Sensitive keys mix values the user must be able to read before installing (commands, scripts, paths)
+// with credentials (tokens, passwords, and URLs, webhooks or SQL strings that often embed them). Only
+// credentials are masked, and anything under a credential key counts as one.
+const SECRET_RE = /(token|secret|password|sql|url|webhook|endpoint)/i
+
+export function isSecretConfigPath(path: string[]) {
+  return path.some(key => SECRET_RE.test(key))
+}
+
+// Paths, as lists of keys, to every value in a preset whose key looks sensitive or risky (tokens, but
+// also commands and scripts), at any depth and of any type, so the user gets to see all of them.
+export function scanSensitiveConfig(value: unknown, path: string[] = []): string[][] {
+  const result: string[][] = []
   if (!value || typeof value !== 'object') return result
   for (const [key, child] of Object.entries(value as Dict)) {
-    const next = path ? `${path}.${key}` : key
+    const next = [...path, key]
     if (SENSITIVE_RE.test(key)) result.push(next)
     result.push(...scanSensitiveConfig(child, next))
   }

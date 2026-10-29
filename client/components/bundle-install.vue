@@ -33,35 +33,24 @@
           <p v-for="item in validationWarnings" :key="item">{{ item }}</p>
         </k-comment>
 
-        <!-- Select-all checkboxes for the per-member options below. -->
-        <div v-if="configTargets.length || presetTargets.length" class="bundle-bulk">
-          <el-checkbox v-if="configTargets.length" :model-value="allCreateConfig" :indeterminate="someCreateConfig" @change="batchSetCreateConfig">
-            {{ t('bundle.bulk.createAll') }}
-          </el-checkbox>
-          <el-checkbox v-if="presetTargets.length" :model-value="allUsePreset" :indeterminate="someUsePreset" @change="batchSetUsePreset">
-            {{ t('bundle.bulk.usePresets') }}
-          </el-checkbox>
-        </div>
-
         <section v-for="section in sections" :key="section.key" class="dialog-section">
           <div class="dialog-section-title">
             <span>{{ section.label }}</span>
             <span class="dialog-count">{{ section.members.length }}</span>
-            <span v-if="section.key === 'optional'" class="dialog-section-actions">
-              <el-button type="primary" text size="small" @click="toggleAllOptional">
-                {{ allOptionalSelected ? t('bundle.members.optionalToggleNone') : t('bundle.members.optionalToggleAll') }}
-              </el-button>
-            </span>
           </div>
-          <div class="dialog-list">
+          <div class="dialog-list" :style="{ '--bundle-columns': section.columns.length }">
+            <bundle-all-row :columns="section.columns"></bundle-all-row>
             <div
               v-for="member in section.members"
-              :key="member.package + ':' + member.plugin"
-              :class="['dialog-list-row', 'bundle-member', { optional: !member.required }]"
+              :key="getMemberKey(member)"
+              class="dialog-list-row bundle-member"
             >
-              <!-- Core members are always installed, so only optional ones get a checkbox. -->
-              <el-checkbox v-if="!member.required" v-model="member.selected" :aria-label="member.package"></el-checkbox>
-              <div :class="['member-main', { toggle: !member.required }]" @click="!member.required && (member.selected = !member.selected)">
+              <!-- Clicking an optional member's info also toggles whether it is installed, except for members
+                   whose installed version would be replaced: those only change through their checkbox. -->
+              <div
+                :class="['member-main', { toggle: !member.required && !versionMismatch(member) }]"
+                @click="!member.required && !versionMismatch(member) && (member.selected = !member.selected)"
+              >
                 <div class="member-line">
                   <span class="member-name">{{ formatShortname(member.package) }}</span>
                   <span class="member-version">{{ member.version }}</span>
@@ -72,65 +61,73 @@
                   {{ getPackageDescription(member.package) }}
                 </p>
               </div>
+              <!-- Core members are always installed, so only optional ones have this column. -->
+              <el-checkbox v-if="!member.required" v-model="member.selected" :aria-label="`${t('bundle.members.install')}: ${member.package}`"></el-checkbox>
+              <!-- Options only show as checked when a config gets created (see createsConfig). The raw usePreset
+                   value is kept so that re-checking "create config" restores it. "Use preset" goes by whether the
+                   manifest ships one, like the editor, so it can still be turned off after editing the preset to {}. -->
+              <el-checkbox
+                :model-value="createsConfig(member)"
+                :disabled="!member.selected || member.move || member.conflict === 'same-group'"
+                :aria-label="`${t('bundle.members.createConfig')}: ${member.package}`"
+                @update:model-value="member.createConfig = !!$event"
+              ></el-checkbox>
+              <el-checkbox
+                v-if="section.presets"
+                :model-value="createsConfig(member) && member.usePreset"
+                :disabled="!createsConfig(member) || !shipsPreset(member)"
+                :aria-label="`${t('bundle.members.usePreset')}: ${member.package}`"
+                @update:model-value="member.usePreset = !!$event"
+              ></el-checkbox>
 
-              <div v-if="member.selected" class="member-details">
-                <div class="member-options">
-                  <el-checkbox v-model="member.createConfig" :disabled="member.conflict === 'same-group'">{{ t('bundle.members.createConfig') }}</el-checkbox>
-                  <el-checkbox v-if="member.conflict === 'other-config'" v-model="member.move">{{ t('bundle.members.moveConfig') }}</el-checkbox>
-                  <el-checkbox v-model="member.usePreset" :disabled="!member.createConfig || member.move || !hasPreset(member)">{{ t('bundle.members.usePreset') }}</el-checkbox>
-                </div>
-
+              <!-- The version note also shows for unselected members: it is why they start unselected. -->
+              <div v-if="versionMismatch(member) || member.selected && member.conflict || editsPreset(member)" class="member-details">
                 <p v-if="versionMismatch(member)" class="member-note danger">
                   {{ t('bundle.conflict.version', { current: store.dependencies?.[member.package]?.resolved, range: member.version }) }}
                 </p>
-                <p v-if="member.conflict === 'other-config'" class="member-note warning">{{ t('bundle.conflict.config') }}</p>
-                <p v-if="member.conflict === 'same-group'" class="member-note">{{ t('bundle.conflict.sameGroup') }}</p>
+                <template v-if="member.selected && member.conflict === 'other-config'">
+                  <p class="member-note warning">{{ t('bundle.conflict.config') }}</p>
+                  <el-checkbox v-model="member.move">{{ t('bundle.members.moveConfig') }}</el-checkbox>
+                </template>
+                <p v-if="member.selected && member.conflict === 'same-group'" class="member-note">{{ t('bundle.conflict.sameGroup') }}</p>
 
-                <div v-if="member.usePreset && sensitiveFields(member).length" class="sensitive-fields">
+                <!-- Hidden while the JSON below has an error, since fixing it would overwrite these fields.
+                     Text values can be filled in; anything else (lists, numbers) is shown as is. -->
+                <div v-if="usesPreset(member) && !draftOf(member)?.error && sensitiveFields(member).length" class="sensitive-fields">
                   <div class="editor-title">{{ t('bundle.editor.sensitive') }}</div>
-                  <label v-for="field in sensitiveFields(member)" :key="field" class="editor-field">
-                    <span>{{ field }}</span>
+                  <label v-for="field in sensitiveFields(member)" :key="JSON.stringify(field.path)" class="editor-field">
+                    <span>{{ field.path.join('.') }}</span>
                     <el-input
-                      v-model="member.config[field]"
+                      v-if="typeof field.value === 'string' || field.value == null"
+                      :model-value="field.value"
                       size="small"
-                      :placeholder="t('bundle.editor.placeholder', { field })"
-                      show-password
+                      :placeholder="t('bundle.editor.placeholder', { field: field.path.join('.') })"
+                      :show-password="isSecretConfigPath(field.path)"
+                      @update:model-value="writeField(member, field.path, $event)"
                     ></el-input>
+                    <code v-else class="sensitive-value">{{ isSecretConfigPath(field.path) ? '••••••' : JSON.stringify(field.value) }}</code>
                   </label>
                 </div>
 
-                <details v-if="hasPreset(member)" class="member-config">
+                <details v-if="editsPreset(member)" class="member-config">
                   <summary>{{ t('bundle.editor.viewPreset') }}</summary>
                   <textarea
                     class="raw-json-editor"
-                    :value="formatConfig(member.config)"
+                    :value="draftOf(member)?.text ?? formatConfig(member.config)"
                     rows="8"
                     @input="onJsonInput(member, $event.target.value)"
                   ></textarea>
-                  <div v-if="memberJsonErrors[getMemberKey(member)]" class="json-error-text">
-                    {{ t('bundle.editor.jsonError', { error: memberJsonErrors[getMemberKey(member)] }) }}
-                  </div>
                 </details>
+                <!-- Outside the editor, so it stays visible (it blocks installing) even when that is collapsed. -->
+                <p v-if="editsPreset(member) && draftOf(member)?.error" class="member-note danger">
+                  {{ draftOf(member)!.error!.notObject ? t('bundle.editor.notObject') : t('bundle.editor.jsonError', { error: draftOf(member)!.error!.message }) }}
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        <div class="dialog-caption">{{ t('bundle.diff.title') }}</div>
-        <div class="dialog-list">
-          <div v-for="row in diffRows" :key="row.label" class="dialog-list-row diff-row">
-            <div class="diff-label">
-              {{ row.label }}
-              <span class="dialog-count">{{ row.items.length }}</span>
-            </div>
-            <div class="diff-items">
-              <!-- A manifest may list the same name twice, so the index is the key. -->
-              <span v-for="(item, index) in row.items" :key="index" :class="['dialog-tag', { primary: item.preset }]">
-                {{ item.name }}<template v-if="item.preset"> · {{ t('bundle.diff.preset') }}</template>
-              </span>
-            </div>
-          </div>
-        </div>
+        <bundle-diff :rows="diffRows"></bundle-diff>
       </template>
     </template>
 
@@ -146,13 +143,14 @@
 <script setup lang="ts">
 
 import { computed, reactive, ref, watch } from 'vue'
-import { message, send, socket, store, useContext } from '@koishijs/client'
+import { Dict, message, send, socket, store, useContext } from '@koishijs/client'
 import type { Registry } from '@koishijs/registry'
 import {
   BundleInstallMember,
   BundleInstallResult,
   PluginBundleManifest,
   parseBundleManifest,
+  isSecretConfigPath,
   scanSensitiveConfig,
   validateBundleManifest,
   getBundleGroupIdent,
@@ -169,6 +167,8 @@ import {
 import { satisfies } from 'semver'
 import { useMarketNextI18n } from '../i18n'
 import { getMarketObject, loadMarketObjects } from '../market/state'
+import BundleAllRow, { type BundleColumn } from './bundle-all-row.vue'
+import BundleDiff from './bundle-diff.vue'
 import MarketDialog from './market-dialog.vue'
 
 const loading = ref(false)
@@ -191,18 +191,6 @@ const validation = computed(() => {
 const validationErrors = computed(() => validation.value.errors)
 const validationWarnings = computed(() => validation.value.warnings)
 const selectedMembers = computed(() => members.filter(member => member.selected))
-const optionalMembers = computed(() => members.filter(m => !m.required))
-const sections = computed(() => [
-  { key: 'required', label: t('bundle.members.required'), members: members.filter(m => m.required) },
-  { key: 'optional', label: t('bundle.members.optional'), members: optionalMembers.value },
-].filter(section => section.members.length))
-const allOptionalSelected = computed(() => optionalMembers.value.length > 0 && optionalMembers.value.every(m => m.selected))
-
-function toggleAllOptional() {
-  const target = !allOptionalSelected.value
-  for (const m of optionalMembers.value) m.selected = target
-}
-
 // Names only: each member row already shows its full package name and version range, and a version
 // mismatch gets its own note, so repeating `package@range` here would turn the summary back into a
 // wall of text.
@@ -211,27 +199,44 @@ const diffRows = computed(() => {
   const selected = selectedMembers.value
   return [
     { label: t('bundle.diff.install'), items: [activeBundle.value.package.name, ...selected.map(m => m.package)].map(name => ({ name: formatShortname(name) })) },
-    { label: t('bundle.diff.config'), items: selected.filter(m => m.createConfig && !m.move).map(m => ({ name: m.plugin, preset: m.usePreset })) },
+    { label: t('bundle.diff.config'), items: selected.filter(createsConfig).map(m => ({ name: m.plugin, preset: usesPreset(m) })) },
     { label: t('bundle.diff.move'), items: selected.filter(m => m.move).map(m => ({ name: m.plugin })) },
-    { label: t('bundle.diff.skip'), items: selected.filter(m => !m.createConfig && !m.move).map(m => ({ name: m.plugin })) },
-  ].filter(row => row.items.length)
+    { label: t('bundle.diff.skip'), items: selected.filter(m => !createsConfig(m) && !m.move).map(m => ({ name: m.plugin })) },
+  ]
 })
 
-const memberJsonErrors = reactive<Record<string, string>>({})
+// What the user typed into each preset editor, with its error if it doesn't parse (kept untranslated,
+// so it follows a language switch). The textarea would
+// otherwise snap back to the last valid preset on every re-render. The sensitive-field inputs are
+// hidden while the draft has an error, and typing in them drops the draft (see writeField).
+const presetDrafts = reactive<Record<string, { text: string, error?: { notObject?: boolean, message?: string } }>>({})
 
 function getMemberKey(member: BundleInstallMember) {
   return `${member.package}:${member.plugin}`
 }
 
-function onJsonInput(member: BundleInstallMember, value: string) {
-  const key = getMemberKey(member)
+function draftOf(member: BundleInstallMember) {
+  return presetDrafts[getMemberKey(member)]
+}
+
+// Typing in a sensitive field also drops the preset draft, so the textarea shows the new value.
+function writeField(member: BundleInstallMember, field: string[], value: string) {
+  field.slice(0, -1).reduce<Dict>((value, key) => value[key], member.config!)[field.at(-1)!] = value
+  delete presetDrafts[getMemberKey(member)]
+}
+
+// A preset has to stay a JSON object, so the editor and the config it writes keep working.
+function onJsonInput(member: BundleInstallMember, text: string) {
+  let parsed: unknown
+  let error: { notObject?: boolean, message?: string } | undefined
   try {
-    const parsed = JSON.parse(value)
-    member.config = parsed
-    delete memberJsonErrors[key]
+    parsed = JSON.parse(text)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) error = { notObject: true }
   } catch (err) {
-    memberJsonErrors[key] = (err as Error).message
+    error = { message: (err as Error).message }
   }
+  if (!error) member.config = parsed as BundleInstallMember['config']
+  presetDrafts[getMemberKey(member)] = { text, error }
 }
 
 const canInstall = computed(() => {
@@ -240,20 +245,27 @@ const canInstall = computed(() => {
     && validation.value.valid 
     && selectedMembers.value.length > 0 
     && !loading.value
-    && Object.keys(memberJsonErrors).length === 0
+    // Only presets that will be used count, so an error in an unused one doesn't block installing.
+    // A broken preset blocks installing whenever the user means to use it, even one edited down to {}.
+    && !members.some(m => editsPreset(m) && draftOf(m)?.error)
 })
 
+// The serial drops a response for a bundle the user has already left, so it can't mix into the next one.
+let loadSerial = 0
+
 watch(activeBundle, async (value) => {
+  const serial = ++loadSerial
   error.value = ''
   registry.value = undefined
   bundle.value = undefined
   resolvedBundleVersion.value = ''
   members.splice(0)
-  Object.keys(memberJsonErrors).forEach(key => delete memberJsonErrors[key])
+  Object.keys(presetDrafts).forEach(key => delete presetDrafts[key])
   if (!value) return
   loading.value = true
   try {
     const data = await send('market/package', value.package.name) as Registry
+    if (serial !== loadSerial) return
     if (!data?.versions) {
       error.value = t('bundle.messages.noMetadata')
       return
@@ -286,9 +298,11 @@ watch(activeBundle, async (value) => {
       const dep = store.dependencies?.[member.package]
       members.push({
         ...member,
+        // A copy, so filling in the preset doesn't change the manifest it came from.
+        config: member.config && JSON.parse(JSON.stringify(member.config)),
         selected: !!member.required || (!!dep && !versionMismatch(member)),
-        createConfig: !hasConfig && conflictType !== 'same-group',
-        usePreset: !hasConfig && !!member.config && Object.keys(member.config).length > 0,
+        createConfig: !hasConfig,
+        usePreset: !hasConfig && hasPreset(member),
         move: false,
         conflict: conflictType,
       })
@@ -296,13 +310,13 @@ watch(activeBundle, async (value) => {
     const names = parsed.members.map(member => member.package).filter(name => !store.registry?.[name])
     if (names.length) {
       const result = await (send('market/registry', names) ?? Promise.resolve(undefined)).catch(() => undefined)
-      if (result) store.registry = { ...store.registry, ...result }
+      if (result && serial === loadSerial) store.registry = { ...store.registry, ...result }
     }
   } catch (err) {
     console.error(err)
-    error.value = err instanceof Error ? err.message : t('bundle.messages.loadFailed')
+    if (serial === loadSerial) error.value = err instanceof Error ? err.message : t('bundle.messages.loadFailed')
   } finally {
-    loading.value = false
+    if (serial === loadSerial) loading.value = false
   }
 }, { immediate: true })
 
@@ -346,7 +360,7 @@ function riskTags(member: BundleInstallMember) {
   if (data?.deprecated || versionMeta(member)?.deprecated) tags.push({ label: t('bundle.members.deprecated'), type: 'danger' })
   if (data?.manifest?.preview) tags.push({ label: t('bundle.members.preview'), type: 'warning' })
   if (data?.portable) tags.push({ label: t('bundle.members.portable'), type: 'info' })
-  if (hasPreset(member)) tags.push({ label: t('bundle.members.hasPreset'), type: 'warning' })
+  if (shipsPreset(member)) tags.push({ label: t('bundle.members.hasPreset'), type: 'warning' })
   return tags
 }
 
@@ -356,12 +370,36 @@ function versionMismatch(member: BundleInstallMember) {
   return !!resolved && !satisfies(resolved, member.version, { includePrerelease: true })
 }
 
-function hasPreset(member: BundleInstallMember) {
+// Whether the bundle will create a new config for this member, and whether that config takes the preset.
+// The summary and the request go by these. The "use preset" checkbox and the editor go by whether the
+// manifest ships a preset instead (editsPreset), so both stay usable after editing it down to {};
+// an empty preset writes the same {} as no preset, so the two never disagree on what gets installed.
+function createsConfig(member: BundleInstallMember) {
+  return member.selected && member.createConfig && !member.move
+}
+
+function usesPreset(member: BundleInstallMember) {
+  return createsConfig(member) && member.usePreset && hasPreset(member)
+}
+
+// Only members whose manifest ships a preset get the editor, so editing one down to {} keeps it.
+function shipsPreset(member: BundleInstallMember) {
+  return !!bundle.value?.members.some(m => m.package === member.package && m.plugin === member.plugin && hasPreset(m))
+}
+
+function editsPreset(member: BundleInstallMember) {
+  return member.usePreset && createsConfig(member) && shipsPreset(member)
+}
+
+function hasPreset(member: { config?: Record<string, any> }) {
   return !!member.config && Object.keys(member.config).length > 0
 }
 
 function sensitiveFields(member: BundleInstallMember) {
-  return scanSensitiveConfig(member.config)
+  return scanSensitiveConfig(member.config).map(path => ({
+    path,
+    value: path.reduce<any>((value, key) => value?.[key], member.config),
+  }))
 }
 
 function formatConfig(value: unknown) {
@@ -373,25 +411,46 @@ function close() {
   activeBundle.value = undefined
 }
 
-// Members that already have a config elsewhere are left alone, since creating one would duplicate it.
-// The checkbox label says so.
-const configTargets = computed(() => selectedMembers.value.filter(m => m.conflict !== 'same-group' && m.conflict !== 'other-config'))
-const allCreateConfig = computed(() => configTargets.value.every(m => m.createConfig))
-const someCreateConfig = computed(() => !allCreateConfig.value && configTargets.value.some(m => m.createConfig))
-const presetTargets = computed(() => selectedMembers.value.filter(m => hasPreset(m) && m.createConfig && !m.move))
-const allUsePreset = computed(() => presetTargets.value.every(m => m.usePreset))
-const someUsePreset = computed(() => !allUsePreset.value && presetTargets.value.some(m => m.usePreset))
-
-function batchSetCreateConfig(value: boolean) {
-  for (const m of configTargets.value) {
-    m.createConfig = value
-    if (!value) m.usePreset = false
+// Core and optional members get their own tables, each with an "all members" row (see bundle-all-row).
+// A bulk check leaves out members where it could do harm: "install" skips members whose installed
+// version would be replaced, and "create config" skips members already configured outside the bundle,
+// which would get a duplicate. Their own rows still offer both, with a note explaining why. Bundles
+// have a handful of members, so rebuilding this on every click is cheap.
+const sections = computed(() => [
+  { key: 'required', label: t('bundle.members.required'), members: members.filter(m => m.required) },
+  { key: 'optional', label: t('bundle.members.optional'), members: members.filter(m => !m.required) },
+].filter(section => section.members.length).map((section) => {
+  const configurable = section.members.filter(m => m.selected && !m.move && m.conflict !== 'same-group')
+  // The preset column only appears when a member of this table ships a preset.
+  const presets = section.members.some(shipsPreset)
+  // In the same order as the checkboxes in each row: install (optional members only), create config, use preset.
+  const columns: BundleColumn<BundleInstallMember>[] = []
+  if (section.key === 'optional') {
+    columns.push({
+      label: t('bundle.members.install'),
+      members: section.members,
+      targets: section.members.filter(m => !versionMismatch(m)),
+      get: (m: BundleInstallMember) => m.selected,
+      set: (m: BundleInstallMember, value: boolean) => m.selected = value,
+    })
   }
-}
-
-function batchSetUsePreset(value: boolean) {
-  for (const m of presetTargets.value) m.usePreset = value
-}
+  columns.push({
+    label: t('bundle.members.createConfig'),
+    members: configurable,
+    targets: configurable.filter(m => !m.conflict),
+    get: (m: BundleInstallMember) => m.createConfig,
+    set: (m: BundleInstallMember, value: boolean) => m.createConfig = value,
+  })
+  if (presets) {
+    columns.push({
+      label: t('bundle.members.usePreset'),
+      members: section.members.filter(m => createsConfig(m) && shipsPreset(m)),
+      get: (m: BundleInstallMember) => m.usePreset,
+      set: (m: BundleInstallMember, value: boolean) => m.usePreset = value,
+    })
+  }
+  return { ...section, presets, columns }
+}))
 
 async function confirmInstall() {
   if (!activeBundle.value || !bundle.value || installing.value) return
@@ -415,7 +474,9 @@ async function confirmInstall() {
     bundle: bundle.value!,
     members: members.map(member => ({
       ...member,
-      createConfig: member.createConfig || !!member.move,
+      createConfig: createsConfig(member) || !!member.move,
+      // A moved config keeps its own values, so it never takes the preset.
+      usePreset: usesPreset(member),
     })),
   }
 
@@ -520,54 +581,22 @@ function formatInstallError(error: unknown) {
     gap: 0.5rem;
   }
 
-  .bundle-bulk {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1.25rem;
-    margin-bottom: 0.75rem;
-
-    // These labels are long, so they may wrap on phones.
-    .el-checkbox {
-      height: auto;
-      min-height: 1.5rem;
-      white-space: normal;
-    }
-  }
-
-  // Optional members put a checkbox in front; everything after it lines up with the name.
-  .bundle-member {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem 0.75rem;
-
-    &.optional {
-      grid-template-columns: auto minmax(0, 1fr);
-
-      .member-details {
-        grid-column: 2;
-      }
-    }
-  }
-
   .member-main.toggle {
     cursor: pointer;
+  }
+
+  // The option checkboxes sit in the columns; notes and the preset editor take a full-width row below.
+  .member-details {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
   }
 
   .member-desc {
     margin: 0.25rem 0 0;
     color: var(--fg2);
     font-size: 0.8125rem;
-  }
-
-  .member-details {
-    display: grid;
-    gap: 0.5rem;
-  }
-
-  .member-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 1.25rem;
   }
 
   .sensitive-fields {
@@ -618,45 +647,16 @@ function formatInstallError(error: unknown) {
     }
   }
 
-  .json-error-text {
-    margin-top: 0.25rem;
-    color: var(--danger);
-    font-size: 0.8125rem;
-  }
-
-  .diff-row {
-    display: grid;
-    grid-template-columns: 7rem minmax(0, 1fr);
-    align-items: baseline;
-    gap: 0.375rem 0.75rem;
-    padding-block: 0.625rem;
-  }
-
-  .diff-label {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
+  .sensitive-value {
     color: var(--fg2);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
   }
-
-  .diff-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-    min-width: 0;
-
-    .dialog-tag {
-      white-space: normal;
-      overflow-wrap: anywhere;
-    }
-  }
-
 }
 
 @media (max-width: 768px) {
   .bundle-install-panel {
-    .editor-field,
-    .diff-row {
+    .editor-field {
       grid-template-columns: 1fr;
       gap: 0.25rem;
     }

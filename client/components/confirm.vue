@@ -76,6 +76,8 @@ function confirm() {
     }
     if (removeConfig.value) {
       for (const name of removed) {
+        // Bundle members' configs follow the per-member "clean config" choices made in the bundle
+        // uninstall dialog, which win over this global setting.
         if (bundlePackages.has(name) || bundleMembers.has(name)) continue
         getConfigWriter(ctx)?.remove(name)
       }

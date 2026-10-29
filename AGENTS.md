@@ -121,7 +121,7 @@ const title = getMarketObject(name)?.shortname ?? name
 - 一行里只放一到两个主要按钮，其余操作收进「更多」下拉菜单。危险操作（卸载、删除）放在菜单底部，并经过确认。
 - 弹窗统一用 `client/components/market-dialog.vue`（`<market-dialog>`，属性和插槽与 `el-dialog` 相同），它会把正文包进 `el-scrollbar`；样式在 `client/styles/dialog.scss`，负责限制最大宽度、内容区高度和底部按钮换行。`width` 只写设计宽度（如 `width="640px"`）。不要再给弹窗的 header / body / footer 单独铺背景色。
 - 弹窗里的列表、分组标题和小标签用 `dialog.scss` 里的 `dialog-section`、`dialog-list`、`dialog-tag` 等共享类，不要每个弹窗各写一套。
-- 必须同时适配桌面端和移动端（Koishi 在 768px 以下切换为移动布局），不能出现横向滚动。表格类布局在手机上改为纵向堆叠。
+- 必须同时适配桌面端和移动端（Koishi 在 768px 以下切换为移动布局），不能出现横向滚动。表格类布局在手机上改为纵向堆叠；插件包弹窗里「成员 + 复选框列」的表格例外，手机上保留列并收窄列宽，以免拆散首行的列名和全选。
 - 改动样式后，截图核对浅色、深色、手机宽度三种情况。
 
 ## 文案与多语言
