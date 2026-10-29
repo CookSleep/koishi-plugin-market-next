@@ -306,23 +306,23 @@ async function uninstallBundle() {
 
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 
-:global(.bundle-uninstall-dialog) {
+.bundle-uninstall-dialog {
 
-  :deep(.el-radio-group) {
+  .el-radio-group {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     width: 100%;
   }
 
-  :deep(.el-radio-button) {
+  .el-radio-button {
     min-width: 0;
   }
 
-  :deep(.el-radio-button__inner) {
+  .el-radio-button__inner {
     width: 100%;
-    padding: 0 0.5rem;
+    padding-inline: 0.5rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -457,13 +457,11 @@ async function uninstallBundle() {
     }
   }
 
+  // Equal columns would cut off the longest label on phones. Stacking them breaks the joined
+  // borders of the button group, so the columns size to their labels instead.
   @media (max-width: 640px) {
-    :deep(.el-radio-group) {
-      grid-template-columns: 1fr;
-    }
-
-    :deep(.el-radio-button__inner) {
-      text-align: center;
+    .el-radio-group {
+      grid-template-columns: repeat(3, auto);
     }
   }
 }
