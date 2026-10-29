@@ -12,6 +12,7 @@ readingPreview: 正在对比差异……
 isCurrent: 这就是当前环境，选一条更早的记录来对比差异。
 noChanges: 和当前环境完全一样。
 loadFailed: 读取记录失败，请检查后端日志。
+loadFailedToast: 读取记录失败，请检查后端日志
 previewFailed: 读取差异失败，这条记录可能已被清理。
 changedCount: 与当前环境相比有 {count} 处不同
 unsupportedCount: '{count} 个无法自动恢复'

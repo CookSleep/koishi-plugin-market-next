@@ -12,6 +12,7 @@ readingPreview: Comparing…
 isCurrent: This is the current environment. Pick an earlier record to compare.
 noChanges: Identical to the current environment.
 loadFailed: Failed to read records. Check the backend log.
+loadFailedToast: Failed to read records. Check the backend log
 previewFailed: Failed to read the difference. This record may have been cleaned up.
 changedCount: '{count} difference(s) from the current environment'
 unsupportedCount: '{count} cannot be restored automatically'

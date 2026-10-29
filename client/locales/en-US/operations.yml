@@ -5,7 +5,7 @@ confirm:
   removeDependency: Uninstall
   removeConfig: Also remove the config of uninstalled plugins
   apply: Apply changes
-  saveBundleFailed: Failed to save plugin bundle ownership. Refresh and check again.
+  saveBundleFailed: Failed to save plugin bundle ownership. Refresh and check again
 install:
   installErrorHint: This dependency failed to install. You can try repairing or removing it.
   peerName: Dependency
@@ -59,7 +59,7 @@ manual:
   notInstalled: Not installed
   scriptWarning: 'This archive contains installation lifecycle scripts: {scripts}. Install it only if you trust the source.'
   installingTitle: Installing local plugin {name}…
-  installSuccess: Local plugin {name}@{version} installed successfully.
+  installSuccess: Local plugin {name}@{version} installed successfully
   installFailed: Failed to install local plugin {name}!
   operation:
     install: New install
@@ -104,10 +104,12 @@ progress:
   waitingSelf: Still waiting for package manager output. A disconnect afterward is expected during the market-next reload.
   waitingDependencies: Still waiting for package manager output. Large changes or a slow network may take longer.
   disconnected: The Console connection was lost, so the installation result is unknown. Refresh the dependencies page to confirm.
-  disconnectedShort: The connection was lost, so the result is unknown. Refresh and check again.
-  selfSubmittedSuccess: market-next update submitted. The Console is reloading.
-  dependenciesSubmittedSuccess: Dependency changes submitted. The Console is reloading.
-  selfSuccessToast: market-next updated. The Console will reload shortly.
+  disconnectedShort: The connection was lost, so the result is unknown. Refresh and check again
+  selfSubmittedSuccess: market-next update submitted. The Console is reloading
+  dependenciesSubmittedSuccess: Dependency changes submitted. The Console is reloading
+  selfSuccessToast: market-next updated. The Console will reload shortly
+  # Toasts have no final period; errorSelf is a full sentence in the install progress dialog
+  selfErrorToast: market-next update failed. Check the console output
   successToast: Installation successful!
   runningEnvironment: Restoring the complete dependency environment. Keep this page open…
   successEnvironment: The dependency environment was restored. The Console is synchronizing state.
@@ -115,14 +117,15 @@ progress:
   requestFailed: 'Installation request failed: {detail}'
   installError: Installation failed!
   installTimeout: Installation timed out!
+  errorWithDetail: '{message} ({detail})'
   environmentTitle: Restoring dependency environment…
   environmentPreparing: Reading the current environment again and validating the target version…
   environmentWaiting: Still waiting for package manager output. Restoring multiple dependencies may take longer.
   environmentDisconnected: The Console connection was lost, so the restore result is unknown. Refresh Dependencies and Version Management to confirm.
-  environmentDisconnectedShort: The connection was lost, so the environment restore result is unknown.
-  environmentError: Failed to restore the dependency environment.
-  environmentSubmitted: Environment restore submitted. The Console is reloading.
-  environmentSuccess: Dependency environment restored successfully.
+  environmentDisconnectedShort: The connection was lost, so the environment restore result is unknown
+  environmentError: Failed to restore the dependency environment
+  environmentSubmitted: Environment restore submitted. The Console is reloading
+  environmentSuccess: Dependency environment restored successfully
   environmentErrorTitle: Failed to restore the dependency environment!
   environmentTimeout: The dependency environment restore request timed out!
   fallbackLog: 'You can retry once with fallback npm source {endpoint}; your configuration will not be changed.'
@@ -138,13 +141,14 @@ history:
   empty: After you install, update or uninstall dependencies, the full package manager output is kept here for troubleshooting.
   readingLog: Reading log…
   copyLog: Copy log
-  copied: Log copied.
-  copyFailed: Copy failed. Select the log text manually.
+  copied: Log copied
+  copyFailed: Copy failed. Select the log text manually
   close: Close
   source: Install source
   logSize: Log size
   truncated: The log is large; copied content keeps only the beginning and end.
   loadFailed: Failed to read recent operations. Check the backend log.
+  loadFailedToast: Failed to read recent operations. Check the backend log
   detailFailed: Failed to read the log detail. The file may have been cleaned up.
   statusRunning: Running
   statusSuccess: Succeeded
@@ -171,7 +175,7 @@ timeline:
   loadFailed: Failed to read version history. Try again later.
   from: Changed from {version}
   useVersion: Set as target version
-  added: '{version} was added to the pending changes.'
+  added: '{version} was added to the pending changes'
   close: Close
   uninstalled: Uninstalled
   unknownVersion: Unknown

@@ -21,14 +21,14 @@ actions:
   install: Install
   retry: Retry
 messages:
-  refreshMarketSubmitted: The market refresh request has been submitted.
-  refreshMarketSuccess: The plugin market was refreshed successfully.
-  refreshMarketFailed: Market refresh failed. The last usable data is still shown.
-  refreshDependenciesStarted: Dependency version refresh started.
-  refreshFailed: Refresh failed. Check the network or logs.
+  refreshMarketSubmitted: The market refresh request has been submitted
+  refreshMarketSuccess: The plugin market was refreshed successfully
+  refreshMarketFailed: Market refresh failed. The last usable data is still shown
+  refreshDependenciesStarted: Dependency version refresh started
+  refreshFailed: Refresh failed. Check the network or logs
   disconnected: The connection was lost, so the operation result is unknown. Refresh and check again.
   saved: Saved successfully.
-  saveFailed: Failed to save. Check the logs.
+  saveFailed: Failed to save. Check the logs
   unknownError: Unknown error
   timeUnknown: Unknown time
   metadataTimeout: The npm metadata request is taking too long. Refresh dependency versions and try again.

@@ -62,7 +62,7 @@ messages:
   noMetadata: No npm version metadata was found for this plugin bundle.
   noManifest: This package is identified as a plugin bundle but has no koishi.bundle manifest, so it cannot be expanded.
   loadFailed: Failed to read the plugin bundle manifest.
-  recordFailed: Could not read the plugin bundle members; only the bundle itself will be uninstalled.
+  recordFailed: Could not read the plugin bundle members; only the bundle itself will be uninstalled
   noMembers: No manageable members were found. Only the plugin bundle itself will be uninstalled.
   noDependency: No plugin bundle dependency was found for this group.
   outsideConfig: Config outside the bundle group is never deleted, and a member with config outside the bundle is never uninstalled.
@@ -71,13 +71,13 @@ messages:
   waiting: Still waiting for package manager output. A bundle processes multiple members and may take longer on a slow network.
   disconnected: The Console connection was lost, so the bundle installation result is unknown. Refresh the dependencies page to confirm.
   exitCode: 'Package manager exit code: {code}'
-  completed: 'Plugin bundle installed{moved}{skipped}.'
+  completed: 'Plugin bundle installed{moved}{skipped}'
   moved: ', moved {count} config(s)'
   skipped: ', skipped {count} config(s)'
   installFailed: 'Plugin bundle installation failed: {detail}'
   unknownError: Unknown error
-  stagedUninstall: 'Plugin bundle uninstall staged: {members} member(s) removed, {configs} config(s) cleaned. It will take effect after applying changes.'
-  recordSaveFailed: Failed to save plugin bundle ownership. Refresh and check again.
+  stagedUninstall: 'Plugin bundle uninstall staged: {members} member(s) removed, {configs} config(s) cleaned. It will take effect after applying changes'
+  recordSaveFailed: Failed to save plugin bundle ownership. Refresh and check again
   uninstalling: Uninstalling plugin bundle…
   uninstalled: Plugin bundle uninstalled successfully!
   uninstallFailed: Plugin bundle uninstall failed!

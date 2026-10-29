@@ -74,8 +74,8 @@ localBinding:
   note: Plugin scripts are not run while packing, and package.json is not changed immediately. Bind every plugin marked “Source not bound”, then apply the staged changes together.
   cancel: Cancel
   confirm: Create and bind
-  prepared: The local source has been added to pending changes.
-  failed: Could not create the local source. Check the backend log.
+  prepared: The local source has been added to pending changes
+  failed: Could not create the local source. Check the backend log
 ignore:
   title: Ignore Update
   intro: '{name} has a new version {version}. What would you like to do?'
@@ -91,8 +91,8 @@ ignore:
   durationNote: Updates will show again when the time is up or when more new versions are released than you chose to skip.
   cancel: Cancel
   confirm: Ignore
-  addedToDisabled: This plugin will no longer be checked for updates.
-  saved: This update is ignored.
+  addedToDisabled: This plugin will no longer be checked for updates
+  saved: This update is ignored
 registry:
   loading: 'Fetching version data from npm registry{endpoint}{attempts}…'
   attempts: 'attempted {count} time(s)'

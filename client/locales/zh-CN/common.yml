@@ -21,14 +21,14 @@ actions:
   install: 安装
   retry: 重试
 messages:
-  refreshMarketSubmitted: 插件市场刷新请求已提交。
-  refreshMarketSuccess: 插件市场刷新成功。
-  refreshMarketFailed: 插件市场刷新失败，已保留可用数据。
-  refreshDependenciesStarted: 依赖版本刷新已开始。
-  refreshFailed: 刷新失败，请检查网络或日志。
+  refreshMarketSubmitted: 插件市场刷新请求已提交
+  refreshMarketSuccess: 插件市场刷新成功
+  refreshMarketFailed: 插件市场刷新失败，已保留可用数据
+  refreshDependenciesStarted: 依赖版本刷新已开始
+  refreshFailed: 刷新失败，请检查网络或日志
   disconnected: 连接已断开，安装结果无法确认，请刷新后检查。
   saved: 保存成功。
-  saveFailed: 保存失败，请检查日志。
+  saveFailed: 保存失败，请检查日志
   unknownError: 未知错误
   timeUnknown: 时间未知
   metadataTimeout: npm 元数据请求长时间未完成，请刷新依赖版本后重试。

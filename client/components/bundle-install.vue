@@ -162,6 +162,7 @@ import {
   installProgressState,
   prepareInstallFallbackRetry,
   resetInstallFallbackState,
+  toastText,
   type InstallOptions,
 } from './utils'
 import { satisfies } from 'semver'
@@ -547,7 +548,7 @@ function reportInstallError(detail: string) {
     type: 'stderr',
     line: t('bundle.messages.installFailed', { detail: text }),
   })
-  message.error(t('bundle.messages.installFailed', { detail: text }))
+  message.error(t('bundle.messages.installFailed', { detail: toastText(text) }))
 }
 
 function formatInstallError(error: unknown) {

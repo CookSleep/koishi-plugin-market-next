@@ -95,7 +95,7 @@ function confirm() {
   }, undefined, selfUpdate ? {
     loadingText: t('operations.progress.selfUpdateTitle'),
     successText: t('operations.progress.selfSubmittedSuccess'),
-    errorText: t('operations.progress.errorSelf'),
+    errorText: t('operations.progress.selfErrorToast'),
     timeoutText: t('operations.progress.installTimeout'),
     selfUpdate: true,
   } : undefined)

@@ -114,6 +114,13 @@ export function getRegistryStatusText(name: string) {
   }
 }
 
+// Toasts end without a full stop, also when the text is a sentence from the server or from a
+// dialog, which may end in a line break. An ellipsis is left alone.
+export function toastText(text: string) {
+  text = text.trimEnd()
+  return text.endsWith('...') ? text : text.replace(/[。.]$/, '')
+}
+
 export function formatEndpoint(endpoint: string) {
   try {
     return new URL(endpoint).host
@@ -415,7 +422,7 @@ export async function prepareInstallFallbackRetry(run: (options?: InstallOptions
       const detail = formatInstallError(error)
       installProgressState.status = 'error'
       pushInstallLog(translate('operations.progress.requestFailed', { detail }), 'stderr')
-      message.error(translate('operations.progress.installError') + (detail ? ` ${detail}` : ''))
+      message.error(withErrorDetail(translate('operations.progress.installError'), detail))
     } finally {
       installProgressState.fallbackRunning = false
       installProgressState.retryFallback = undefined
@@ -440,7 +447,13 @@ function reportInstallRequestError(error: unknown, messages: InstallMessages) {
   pushInstallLog(translate('operations.progress.requestFailed', { detail }), 'stderr')
   message.error(isTimeout
     ? messages.timeoutText ?? translate('operations.progress.installTimeout')
-    : `${messages.errorText ?? translate('operations.progress.installError')}${detail ? ` ${detail}` : ''}`)
+    : withErrorDetail(messages.errorText ?? translate('operations.progress.installError'), detail))
+}
+
+// How every failed install request reads in a toast. The detail often comes from the server and
+// ends in a full stop, which a toast drops; the ！ of the texts stays, as only full stops are dropped.
+function withErrorDetail(text: string, detail: string) {
+  return detail ? translate('operations.progress.errorWithDetail', { message: text, detail: toastText(detail) }) : text
 }
 
 function isSelfUpdate(override: Dict<string>) {

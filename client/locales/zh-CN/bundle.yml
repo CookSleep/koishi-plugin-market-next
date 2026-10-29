@@ -62,22 +62,22 @@ messages:
   noMetadata: 没有读取到这个插件包的 npm 版本元数据。
   noManifest: 这个包被识别为插件包，但没有提供 koishi.bundle 清单，不能执行展开安装。
   loadFailed: 读取插件包清单失败。
-  recordFailed: 未能读取插件包成员清单，将只卸载插件包自身。
+  recordFailed: 未能读取插件包成员清单，将只卸载插件包自身
   noMembers: 没有读取到可处理的成员清单。将只卸载插件包自身。
   noDependency: 没有找到这个分组对应的插件包依赖。
   outsideConfig: 包分组外的配置永远不会被删除；只要某个成员存在包外配置，就不会卸载它的依赖。
   submitted: 已提交插件包安装请求，正在等待后端处理依赖与配置分组……
   installing: 正在安装插件包……
   waiting: 仍在等待包管理器输出；插件包会同时处理多个成员，弱网环境下可能需要更久。
-  disconnected: Console 连接已断开，插件包安装结果无法确认。请刷新依赖页确认实际状态。
+  disconnected: Console 连接已断开，插件包安装结果无法确认，请刷新依赖页确认实际状态。
   exitCode: 包管理器退出码：{code}
-  completed: 插件包安装完成{moved}{skipped}。
+  completed: 插件包安装完成{moved}{skipped}
   moved: ，移动配置 {count} 项
   skipped: ，跳过配置 {count} 项
   installFailed: 插件包安装失败：{detail}
   unknownError: 未知错误
-  stagedUninstall: 插件包卸载已暂存，卸载成员 {members} 项，清理配置 {configs} 项，应用更改后生效。
-  recordSaveFailed: 插件包归属记录保存失败，请刷新后确认。
+  stagedUninstall: 插件包卸载已暂存，卸载成员 {members} 项，清理配置 {configs} 项，应用更改后生效
+  recordSaveFailed: 插件包归属记录保存失败，请刷新后确认
   uninstalling: 正在卸载插件包……
   uninstalled: 插件包卸载成功！
   uninstallFailed: 插件包卸载失败！

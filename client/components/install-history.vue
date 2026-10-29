@@ -133,7 +133,7 @@ async function runLoadHistory(preserveSelection: boolean) {
   } catch (error) {
     console.error(error)
     loadError.value = t('operations.history.loadFailed')
-    if (entries.value.length) message.error(loadError.value)
+    if (entries.value.length) message.error(t('operations.history.loadFailedToast'))
   } finally {
     loading.value = false
   }

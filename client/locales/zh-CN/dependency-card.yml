@@ -74,8 +74,8 @@ localBinding:
   note: 打包时不会执行插件脚本，也不会马上改动 package.json。建议把所有「来源未绑定」的插件都绑定好，再一起应用更改。
   cancel: 取消
   confirm: 生成并绑定
-  prepared: 本地来源已加入待应用列表。
-  failed: 无法生成本地来源，请检查后端日志。
+  prepared: 本地来源已加入待应用列表
+  failed: 无法生成本地来源，请检查后端日志
 ignore:
   title: 忽略更新
   intro: '{name} 有新版本 {version}，要怎么处理？'
@@ -91,8 +91,8 @@ ignore:
   durationNote: 到期，或者又发布了超出数量的新版本后，会重新提示。
   cancel: 取消
   confirm: 忽略
-  addedToDisabled: 以后不会再提示这个插件的更新。
-  saved: 已忽略这次更新。
+  addedToDisabled: 以后不会再提示这个插件的更新
+  saved: 已忽略这次更新
 registry:
   loading: 正在从 npm registry 获取版本数据{endpoint}{attempts}……
   attempts: 已尝试 {count} 次

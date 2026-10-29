@@ -190,7 +190,7 @@ async function runLoadSnapshots(preserveSelection: boolean) {
   } catch (error) {
     console.error(error)
     loadError.value = t('environment.loadFailed')
-    if (hasHistory.value) message.error(loadError.value)
+    if (hasHistory.value) message.error(t('environment.loadFailedToast'))
   } finally {
     loading.value = false
   }
