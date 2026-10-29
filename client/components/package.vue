@@ -663,7 +663,7 @@ a.dep-name:hover {
   grid-template-rows: minmax(2.5rem, auto) auto;
   grid-template-areas:
     'icon main summary version actions menu'
-    'icon detail detail detail detail menu';
+    'icon detail detail detail detail detail';
   column-gap: 1rem;
   align-items: center;
   padding: 0.5rem 1rem;
