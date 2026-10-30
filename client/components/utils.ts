@@ -1,11 +1,11 @@
 import { Awaitable, Context, Dict, loading, message, receive, send, socket, store, valueMap } from '@koishijs/client'
 import type { Registry, SearchObject } from '@koishijs/registry'
-import type { RegistryStatus } from 'koishi-plugin-market-next'
 import { compare, satisfies } from 'semver'
 import { computed, reactive, Ref, ref, shallowReactive, watch } from 'vue'
 import { active, getBundleRecords, getPendingOverrides, patchMarketNextData } from '../utils'
 import { translate } from '../i18n'
 import { getMarketObject } from '../market/state'
+import type { MarketStore } from '../registry-state'
 import {
   getBundleGroupIdent,
   getPluginShortname,
@@ -84,10 +84,6 @@ export function analyzeVersions(name: string, getVersion: (name: string) => stri
 }
 
 export const manualDeps = reactive<Dict<Registry>>({})
-
-type MarketStore = typeof store & {
-  registryStatus?: Dict<RegistryStatus>
-}
 
 export function getRegistryStatus(name: string) {
   return (store as MarketStore).registryStatus?.[name]

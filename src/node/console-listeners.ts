@@ -42,7 +42,6 @@ export function setupConsoleListeners(
     }
     await Promise.all([
       ctx.get('console')?.refresh('dependencies'),
-      ctx.get('console')?.refresh('registry'),
       ctx.get('console')?.refresh('packages'),
       ctx.get('console')?.refresh('config'),
       ctx.get('console')?.refresh('pluginConfigs'),
@@ -107,7 +106,6 @@ export function setupConsoleListeners(
     const code = await ctx.installer.applyEnvironmentSnapshot(id, options)
     await Promise.all([
       ctx.get('console')?.refresh('dependencies'),
-      ctx.get('console')?.refresh('registry'),
       ctx.get('console')?.refresh('packages'),
     ])
     return code

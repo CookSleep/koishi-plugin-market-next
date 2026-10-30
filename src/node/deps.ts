@@ -25,7 +25,8 @@ class RegistryProvider extends DataService<Dict<Dict<Pick<RemotePackage, Depende
   }
 }
 
-class RegistryStatusProvider extends DataService<Dict<RegistryStatus>> {
+// Null in a patch for a dependency whose fetch a reset cancelled; see RegistryMetadata.reset.
+class RegistryStatusProvider extends DataService<Dict<RegistryStatus | null>> {
   constructor(public ctx: Context) {
     super(ctx, 'registryStatus', { authority: 4 })
   }

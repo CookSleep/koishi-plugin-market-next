@@ -19,7 +19,8 @@
     <k-comment class="warning" v-if="warning" type="warning"><p>{{ warning }}</p></k-comment>
 
     <div v-if="!data && active && !localSelection">
-      <k-comment :type="registryStatus?.error ? 'danger' : 'primary'"><p>{{ registryStatusText }}</p></k-comment>
+      <!-- The dependency card keeps showing an earlier error while it is fetched again; this dialog shows the fetch it waits for. -->
+      <k-comment :type="registryStatus?.error && !registryStatus.loading ? 'danger' : 'primary'"><p>{{ registryStatusText }}</p></k-comment>
     </div>
 
     <k-comment v-if="store.dependencies?.[active] && !current" type="danger">

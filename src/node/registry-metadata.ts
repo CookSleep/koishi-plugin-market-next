@@ -36,14 +36,22 @@ export class RegistryMetadata {
   private flushData: () => void
   private flushRegistryStatus: () => void
 
+  // Sent as patches of the registry and registryStatus data services rather than events of their
+  // own: Koishi applies those itself, so none is lost before the market-next page has loaded, and
+  // they go only to clients that may read the data services. A patch that arrives before a newly
+  // connected page has the data is skipped, but that data is read after the patched values were
+  // stored, so it has them.
   constructor(private ctx: Context, private config: InstallerConfig) {
     this.router = new RegistryRouter(ctx, config)
+    // A reset sends what is waiting itself, so a later call may find nothing to send.
     this.flushData = ctx.throttle(() => {
-      ctx.get('console')?.broadcast('market/registry', this.tempCache)
+      if (!Object.keys(this.tempCache).length) return
+      ctx.get('console')?.patch('registry', this.tempCache)
       this.tempCache = {}
     }, 500)
     this.flushRegistryStatus = ctx.throttle(() => {
-      ctx.get('console')?.broadcast('market/registry-status', { ...this.tempRegistryStatus })
+      if (!Object.keys(this.tempRegistryStatus).length) return
+      ctx.get('console')?.patch('registryStatus', this.tempRegistryStatus)
       this.tempRegistryStatus = {}
     }, 200)
   }
@@ -76,14 +84,50 @@ export class RegistryMetadata {
     await this.router.initializeEndpoint()
   }
 
-  async reset(reason: string) {
-    await this.router.reset(reason)
+  async reset(reason: string, deps: string[]) {
+    const previous = this.registryStatus
+    const isDependency = new Set(deps)
+    // Still waiting in the throttles; the console gets them below rather than never.
+    const versions = this.tempCache
+    const pending = this.tempRegistryStatus
     this.pkgTasks = {}
     this.fetching.clear()
     this.fullCache = {}
     this.tempCache = {}
     this.notFoundCache = {}
-    this.clearRegistryStatus()
+    // The console keeps what it has until the new results are patched in, so the dependencies page
+    // does not empty out and refill while the check runs. Errors of dependencies are kept here too,
+    // since a status patch replaces the whole entry: the next fetch starts from them and settles them.
+    // Local and invalid dependencies are not fetched again, so theirs stays until the package is
+    // fetched or no longer a dependency; their cards ignore the status.
+    this.registryStatus = Object.fromEntries(deps
+      .filter(name => previous[name]?.error)
+      .map(name => [name, { ...previous[name], loading: false }]))
+    this.tempRegistryStatus = {}
+    // In the same tick as the state above, so no fetch of the old or the new serial writes between.
+    // Fetches that start while the endpoint is resolved again still use the previous one, which is
+    // nearly always the same.
+    const resetting = this.router.reset(reason)
+    if (Object.keys(versions).length) this.ctx.get('console')?.patch('registry', versions)
+    // Fetches the reset cancelled never settle their status. A dependency gets what it has here:
+    // its kept error, or null, which reads as being fetched like a status not sent yet, but without
+    // the timeout of a loading one, since the check may take a while to reach it again. The check
+    // fetches every dependency except local and invalid ones, whose cards ignore the status; if
+    // it fails before reaching one, that one reads as being fetched until the next check.
+    const cancelled = Object.keys(previous).filter(name => previous[name].loading)
+    const statuses = {
+      ...pending,
+      ...Object.fromEntries(cancelled
+        .filter(name => isDependency.has(name))
+        .map(name => [name, this.registryStatus[name] ?? null])),
+    }
+    if (Object.keys(statuses).length) this.ctx.get('console')?.patch('registryStatus', statuses)
+    await resetting
+    // Other packages were fetched for a dialog, which may still be waiting for their versions and
+    // does not ask again; they stay loading and are fetched again here.
+    for (const name of cancelled) {
+      if (!isDependency.has(name)) this.getPackage(name).catch(() => {})
+    }
   }
 
   dispose() {
@@ -106,10 +150,9 @@ export class RegistryMetadata {
     let lastError: any
     let lastEndpoint = this.selectedEndpoint
     const failureReasons: RegistryStatus['reason'][] = []
+    // An earlier error stays until this fetch settles, so the dependency stays in its group meanwhile.
     this.setRegistryStatus(name, {
       loading: true,
-      error: undefined,
-      reason: undefined,
       endpoint: lastEndpoint,
       attempts,
       elapsed: undefined,
@@ -196,6 +239,8 @@ export class RegistryMetadata {
   }
 
   setPackage(name: string, versions: RemotePackage[]) {
+    // Versions from the market scan settle a kept error, without ending a fetch that is running.
+    if (this.registryStatus[name]?.error) this.setRegistryStatus(name, { error: undefined, reason: undefined })
     delete this.notFoundCache[name]
     this.fullCache[name] = this.tempCache[name] = getVersions(versions)
     this.flushData()
@@ -278,12 +323,6 @@ export class RegistryMetadata {
     }
     this.registryStatus[name] = this.tempRegistryStatus[name] = value
     this.flushRegistryStatus()
-  }
-
-  private clearRegistryStatus() {
-    this.registryStatus = {}
-    this.tempRegistryStatus = {}
-    this.ctx.get('console')?.broadcast('market/registry-status/clear' as any, {})
   }
 
   private async fetchPackage(name: string, serial = this.serial) {
